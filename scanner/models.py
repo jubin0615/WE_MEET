@@ -122,6 +122,7 @@ class ScanResult:
     routes: list[dict] = field(default_factory=list)
     config_summary: list[dict] = field(default_factory=list)
     kisa_checklist: list[dict] = field(default_factory=list)
+    source_checks: list[dict] = field(default_factory=list)
 
     @classmethod
     def from_json(cls, raw: str):
@@ -151,7 +152,7 @@ class ScanResult:
             checklist=data.get("checklist", []), analysis_note=data.get("analysis_note", ""),
             coverage=data.get("coverage", []),
             **{key: data[key] for key in ("engine", "languages", "partial_files", "sensitive_files",
-                                        "routes", "config_summary", "kisa_checklist") if key in data},
+                                        "routes", "config_summary", "kisa_checklist", "source_checks") if key in data},
         )
 
     def to_dict(self) -> dict:

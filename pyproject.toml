@@ -12,6 +12,7 @@ dependencies = [
   "PyJWT[crypto]>=2.10,<3", "pathspec>=0.12,<1",
   "pywin32>=306; sys_platform == 'win32'", "semgrep==1.185.0",
   "tree-sitter>=0.25,<0.26", "tree-sitter-java>=0.23,<0.24",
+  "packaging>=21", "semantic-version>=2.10,<3",
 ]
 
 [project.scripts]
@@ -21,6 +22,7 @@ vibescan = "vibescan.cli:main"
 packages = ["scanner", "scanner.detectors", "vibescan"]
 
 [tool.setuptools.package-data]
+scanner = ["advisories.json.gz", "ADVISORIES-LICENSE.txt"]
 vibescan = ["web/*.html", "web/*.css", "web/*.js", "web/fonts/*.woff2", "web/fonts/OFL.txt"]
 
 [tool.setuptools.data-files]

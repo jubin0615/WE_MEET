@@ -13,7 +13,7 @@ def main():
     assert configs, 'No bundled rules'
     for config in configs:
         rules = json.loads(config.read_text(encoding='utf-8'))['rules']
-        fixtures = [p for p in root.glob(config.stem + '.*') if p.suffix in ('.py', '.js', '.html', '.java')]
+        fixtures = [p for p in root.glob(config.stem + '.*') if p.suffix in ('.py', '.js', '.html', '.java', '.php', '.rb', '.go')]
         assert fixtures, f'Missing tests: {config.name}'
         content = '\n'.join(p.read_text(encoding='utf-8') for p in fixtures)
         for rule in rules:

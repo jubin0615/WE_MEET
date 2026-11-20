@@ -86,7 +86,19 @@ export PATH="$HOME/.local/bin:$PATH"
 | Git이 아닌 일반 폴더 | 그 순간의 폴더 파일 | 원본 폴더는 바꾸지 않습니다. 스캔할 때마다 새로 읽습니다. |
 | GitHub 주소 | 기본 브랜치의 최신 커밋 | 내 PC에 복제해 두고, 스캔할 때마다 최신 커밋을 받아옵니다. 비공개 저장소는 PC에 설정된 Git 인증이 필요합니다. |
 
-탐지 규칙은 **Python, JavaScript/TypeScript, Java, HTML 템플릿**(Jinja·Vue·Svelte 등)을 다룹니다. PHP·Ruby·Go 파일은 인증정보 노출만 확인합니다.
+탐지 규칙은 **Python, JavaScript/TypeScript, Java, HTML 템플릿**과 PHP·Ruby·Go의 일부 출력 처리를 다룹니다. 대시보드의 **검사 범위**와 Markdown 보고서에서 프로젝트별 점검 근거와 남은 확인 사항을 볼 수 있습니다.
+
+| 영역 | 이번 스캔에서 확인할 수 있는 것 |
+| --- | --- |
+| 의존성 | `requirements*.txt`의 정확한 버전, npm `package.json`의 고정 버전과 `package-lock.json`·`npm-shrinkwrap.json` v1~3을 내장 GitHub 보안 공지와 대조합니다. 결과에 GHSA·CVE와 데이터 기준일을 표시합니다. |
+| Supabase·Firebase | Supabase 마이그레이션에서 테이블 생성 후 RLS 활성화 여부, 명시적 비활성화와 항상 참인 정책 조건을 찾습니다. Firestore·Storage의 무조건 허용 규칙과 Realtime Database의 공개 읽기·쓰기도 점검합니다. |
+| 화면 인증 | 화면의 인증 분기 직후 호출하는 고정 `fetch` 경로와 서버 라우트의 메서드·경로가 일치하면 서버 가드 단서를 확인합니다. 후보에는 화면과 서버 양쪽 위치가 나옵니다. |
+| 서버 전용 키 | `VITE_`·`NEXT_PUBLIC_` 등 공개 환경변수에서 서버 키를 참조하는 코드, 클라이언트 모듈에 직접 쓴 서버 키와 Supabase 비밀 키 형식을 확인합니다. |
+| PHP·Ruby·Go·Vue | PHP의 요청값 직접 출력, Rails의 요청값 HTML 이스케이프 해제, Go의 요청값을 신뢰한 HTML로 변환하는 코드, Vue의 `v-html`·`:innerHTML` 바인딩을 점검합니다. |
+| 서버 설정·응답 헤더 | Nginx 설정에서 디렉터리 목록 표시와 HSTS 해제를 찾습니다. 수집 대상에 `*.headers.http`가 있으면 저장된 응답 한 건의 `nosniff`와 HTML 응답의 CSP 유무도 점검합니다. |
+| 업무 로직 | JS/TS에서 요청 금액을 결제 생성에 직접 전달하는 후보를 찾습니다. 주문·결제·환불 등 상태 변경 경로에는 서버 가격 계산·중복 처리·상태 전이 검토 항목을 제시합니다. |
+
+응답 헤더 표본은 HTTP 상태 줄로 시작하는 **최종 2xx 응답 하나의 헤더만** 담아 주세요. 스냅샷에는 HTML 여부와 점검 대상 헤더의 유무만 남깁니다. 헤더 표본을 제공한 경로·시점, 실제 권한 정책, 서비스별 업무 규칙은 결과를 해석할 때 함께 확인하세요.
 
 Java에서는 Spring MVC의 `@RequestParam` 또는 Servlet의 `getParameter` 입력이 JDBC SQL 본문으로 전달되는지 점검합니다. 소스에서 호출 대상을 식별할 수 있으면 컨트롤러·서비스·저장소 파일을 연결해 보고서에 경로를 표시합니다. Spring MVC 관리자 경로는 `SecurityFilterChain`의 첫 일치 정책 및 `@PreAuthorize`와 대조합니다. 예를 들어 관리자 경로에 로그인만 요구하면 권한 검토 후보로 표시합니다. 실행 프로필, 동적 정책, 실제 사용자별 접근 결과는 수동 확인 대상입니다.
 

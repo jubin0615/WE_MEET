@@ -51,6 +51,14 @@ def checklist(findings, languages, partial_files, carried=()):
                 elif set(detectors) != {'secrets'}:
                     state = '부분 점검'
                     note += ' 이 항목의 Java 전용 규칙은 없습니다.'
+        project_check = {"V-03": "dependencies", "V-04": "baas", "CI-10": "client-auth", "CI-13": "business",
+                         "CI-03": "server", "CI-17": "server"}.get(item["code"])
+        for check in getattr(findings, "source_checks", ()):
+            if check["id"] == project_check:
+                state = "부분 점검" if check["execution"] == "partial" else item["default_status"]
+                note = check["reason"]
+                detectors = {"dependencies": ["dependencies"], "business": ["semgrep"]}.get(project_check, ["project"])
+                break
         coverage_status = state
         if matches:
             state = '취약 후보'

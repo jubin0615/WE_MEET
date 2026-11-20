@@ -2,3 +2,7 @@
 {{ value | safe }}
 <!-- ok: vs-template-raw -->
 {{ value }}
+<!-- ruleid: vs-template-raw -->
+<p :innerHTML="body"></p>
+<!-- ok: vs-template-raw -->
+<p v-text="body"></p>

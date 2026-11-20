@@ -52,12 +52,12 @@ def run():
         p = f'{found/(found+false):.3f}' if found+false else '미산정'
         r = f'{found/positives:.3f}' if positives else '미산정'
         text.append(f'| {code} | {found}/{positives} | {false} | {p} | {r} |')
-    text += ['', '의존성 취약점(V-03)은 후속 범위이며 현재 미탐으로 집계합니다.']
+    text += ['', 'P35는 고정된 Flask 버전을 내장 보안 공지와 대조하는 표본입니다.']
     (base / 'report.md').write_text('\n'.join(text) + '\n', encoding='utf-8')
     print(f'probe={tp}/{positive}, false_positives={fp}, precision={precision:.3f}, recall={recall:.3f}')
     missed = [r['id'] for r in rows if r['expect'] == 'vulnerable' and not r['detected']]
     print('missed:', ', '.join(missed))
-    assert set(missed) <= {'P35'} and fp == 0, 'Detection benchmark regressed from the checked-in baseline'
+    assert not missed and fp == 0, 'Detection benchmark regressed from the checked-in baseline'
     return rows
 
 

@@ -243,6 +243,9 @@ function locationDetail(f) {
     if (!detail.open || detail.children.length > 1) return;
     detail.append(node("p", f.impact_ko || "영향 설명 없음"), node("h4", "근거 코드"), node("pre", f.evidence || "기록 없음"),
       node("h4", "수정 방법"), node("p", f.remediation_ko || "수정 방법 없음"));
+    if (f.rule_id === "vs-client-only-auth") {
+      for (const step of f.trace || []) detail.append(node("p", '화면 호출 근거 · ' + step.file + ':' + step.line));
+    }
     if (f.fix_diff) {
       const fix = node("details"), copy = node("button", "수정안 복사", "secondary");
       copy.addEventListener("click", () => copyText(f.fix_diff, "수정안을 복사했습니다."));
@@ -330,7 +333,7 @@ function filterFindings() {
   }
 }
 function renderCoverage() {
-  const checks = result.coverage || [], completed = checks.filter(c => c.execution === "completed").length;
+  const checks = [...(result.coverage || []), ...(result.source_checks || [])], completed = checks.filter(c => c.execution === "completed").length;
   $("coverage-summary").textContent = checks.length ? `검사 범위 · ${checks.length}개 점검 중 ${completed}개 완료${completed < checks.length ? ` · ${checks.length - completed}개 미완료·수동 확인` : ""}` : "검사 범위 기록 없음";
   const execution = {completed: "✓ 자동 점검 범위 검사 완료", partial: "◐ 부분 점검 · 수동 확인 포함", manual: "◐ 수동 확인 필요 · 미검사", unsupported: "✕ 지원 소스 없음 · 미검사"};
   $("coverage").replaceChildren(...checks.map(c => node("li", `${c.name} — ${execution[c.execution] || "✕ 검사 여부 미확인"}. ${c.reason || ""}`)));
@@ -364,7 +367,7 @@ function render() {
     : later ? `우선순위가 낮은 ${later}가지를 확인하세요.` : "자동 점검에서 열린 문제가 없습니다.";
   const notes = d.baseline_commit ? [fresh && `새로 발견한 문제 ${fresh}가지`, fixed.length && `해결된 문제 ${fixed.length}가지`]
     : ["이 브랜치의 현재 커밋과 비교할 이전 검사 결과가 없습니다."];
-  const incomplete = (d.coverage || []).filter(c => c.execution !== "completed").length;
+  const incomplete = [...(d.coverage || []), ...(d.source_checks || [])].filter(c => c.execution !== "completed").length;
   if (incomplete) notes.push(`직접 확인할 점검 항목 ${incomplete}개`);
   $("delta").textContent = notes.filter(Boolean).join(" · ") || "지난 검사와 비교해 새로 발견되거나 해결된 문제가 없습니다.";
   $("resolution").textContent = urgent + done ? `치명·높음 ${urgent + done}가지 중 ${done}가지 해결` : "";

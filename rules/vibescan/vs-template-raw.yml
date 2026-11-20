@@ -21,7 +21,7 @@
           "fix_example": "-{{ comment.body | safe }}\n+{{ comment.body }}  {# 자동 이스케이프를 유지합니다 #}"
         }
       },
-      "pattern-regex": "\\|\\s*safe\\b|\\{%\\s*autoescape\\s+false\\s*%\\}|v-html\\s*=|\\{@html\\s+",
+      "pattern-regex": "\\|\\s*safe\\b|\\{%\\s*autoescape\\s+false\\s*%\\}|v-html\\s*=|(?:v-bind:|:)innerHTML\\s*=|\\{@html\\s+",
       "paths": {
         "include": [
           "*.html",

@@ -114,6 +114,7 @@ async function main() {
     finding("new", "High", {change: "new"}),
     finding("info", "Info"),
   ]);
+  data.source_checks = [{id: "dependencies", name: "의존성 보안 공지", execution: "partial", reason: "고정 버전 2건 대조"}];
   h.seed(data);
   assert.equal(get("risk-grade").textContent, "위험"); // dismissed Critical is excluded
   assert.equal(get("findings").children.length, 1);
@@ -132,6 +133,7 @@ async function main() {
     assert.equal(h.document.activeElement, get("findings-label"));
   }
   await get("jump-findings").click();
+  assert.match(get("coverage").textContent, /의존성 보안 공지.*고정 버전 2건 대조/);
   assert.equal(h.document.activeElement, get("findings-label"));
   get("search").value = "missing"; run("filterFindings()");
   assert.equal(get("jump-later").hidden, true);

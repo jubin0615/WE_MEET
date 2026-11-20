@@ -1,0 +1,11 @@
+VibeScan's advisories.json.gz is a modified extract of the GitHub Advisory
+Database, provided by GitHub and its contributors under CC BY 4.0.
+Source: https://github.com/github/advisory-database
+License: https://creativecommons.org/licenses/by/4.0/
+Distribution used: https://google.github.io/osv.dev/data/
+
+VibeScan selects active GHSA records for PyPI and npm, normalizes package
+names, and retains IDs, CVE aliases, affected ranges and exact versions for
+records without ranges. Descriptions and exploit details are omitted. The
+snapshot date is stored in the index. Each GHSA ID can be looked up at
+https://github.com/advisories/GHSA-ID (replace GHSA-ID with the full ID).

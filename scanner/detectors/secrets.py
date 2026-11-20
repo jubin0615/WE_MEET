@@ -13,7 +13,7 @@ from ..models import Severity
 SECRET = re.compile(r"""(?ix)["']?\b[\w.-]*(?:api[_-]?key|secret|password|token)\b["']?\s*[:=]\s*["']([^"'\r\n]{8,})["']""")
 KEY = re.compile(r"(?:sk-(?:proj-|ant-)?[A-Za-z0-9_-]{20,}|gh[pousr]_[A-Za-z0-9]{20,}"
                  r"|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|[sr]k_live_[A-Za-z0-9]{16,}"
-                 r"|xox[baprs]-[A-Za-z0-9-]{16,}|eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"
+                 r"|sb_secret_[A-Za-z0-9_-]{16,}|xox[baprs]-[A-Za-z0-9-]{16,}|eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"
                  r"|[a-zA-Z][a-zA-Z0-9+.-]*://[^\s/'\"]+:[^\s@'\"]+@[^\s'\"]+"
                  r"|-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----)")
 SENSITIVE = re.compile(r"api.?key|secret|password|token|credential|authorization|private.?key|(?:^|_)key$|(?:^|_)(?:pwd|dsn)$", re.I)
@@ -126,29 +126,67 @@ def env_fix(name, line, value, var):
     return ""
 
 
-def hidden_values(source):
+CLIENT_BINDING = re.compile(r'''(?:^|\b(?:const|let|var)\s+)([\w]+)\s*=\s*(["'\x60])([^"'\x60\r\n]+)\2''', re.M)
+ENV_BINDING = re.compile(r'^[ \t]*(?:export[ \t]+)?(\w+)[ \t]*=[ \t]*(.*)$', re.M)
+
+
+def hidden_values(source, name=""):
     values = set(KEY.findall(source))
     values.update(m.group(2) for m in ASSIGNMENT.finditer(source)
                   if mask_name(m.group(1)) and m.group(2))
+    if name.rsplit("/", 1)[-1] in {".env.example", ".env.sample"}:
+        for env in ENV_BINDING.finditer(source):
+            if PUBLIC_SERVER_VAR.fullmatch(env[1]) and env[2].strip():
+                values.add(env[2].strip())
+                values.add(env[2].split("#", 1)[0].strip().strip('"\''))
+    if client_module(name, source):
+        values.update(m[3] for m in CLIENT_BINDING.finditer(source)
+                      if PUBLIC_SERVER_VAR.fullmatch("VITE_" + assignment_name(m[1]).upper()) or
+                      PUBLIC_SERVER_VAR.fullmatch(m[1]))
     return values
 
 
-def service_role(value):
+PUBLIC_SERVER_VAR = re.compile(r'\b(?:NEXT_PUBLIC_|VITE_|REACT_APP_|VUE_APP_)(?:[A-Z0-9]+_)*'
+    r'(?:SERVICE_ROLE(?:_KEY)?|SECRET(?:_KEY)?|PRIVATE_KEY|DATABASE_URL|ADMIN_TOKEN|OPENAI_API_KEY|'
+    r'ANTHROPIC_API_KEY|AWS_SECRET_ACCESS_KEY|STRIPE_SECRET_KEY|PASSWORD)\b')
+CLIENT_REMEDIATION = '서버 전용 값을 서버에서만 읽고 필요한 동작을 인증된 API로 제공하세요. 배포 번들에 값이 들어갔다면 키를 교체하세요.'
+
+
+def client_module(name, content):
+    return name.endswith(('.vue', '.svelte')) or (
+        name.endswith(('.js', '.jsx', '.ts', '.tsx', '.mjs')) and (
+            re.search(r'(?:^|/)(?:frontend|client|browser)/', name, re.I) or
+            re.match(r'''^\s*["']use client["']\s*(?:;|$)''', content, re.M)))
+
+
+def supabase_role(value):
     try:
         payload = value.split('.')[1]
-        return json.loads(base64.urlsafe_b64decode(payload + '=' * (-len(payload) % 4))).get('role') == 'service_role'
+        claims = json.loads(base64.urlsafe_b64decode(payload + '=' * (-len(payload) % 4)))
+        return claims.get('role') if claims.get('iss') == 'supabase' or claims.get('role') == 'service_role' else None
     except (ValueError, IndexError, UnicodeError, AttributeError):
-        return False
+        return None
 
 
 def detect(name, content, hidden=None):
     hits = {}
     if hidden is None:
         hidden = set()
-    hidden.update(hidden_values(content))
+    hidden.update(hidden_values(content, name))
     lines = content.splitlines()
     sample = bool(SAMPLE_PATH.search(name))
     lockfile = name.rsplit("/", 1)[-1].lower() in LOCKFILES
+    client = client_module(name, content)
+    if name.rsplit("/", 1)[-1] in {".env.example", ".env.sample"}:
+        for line, text in enumerate(lines, 1):
+            env = ENV_BINDING.match(text)
+            if env and PUBLIC_SERVER_VAR.fullmatch(env[1]):
+                value = env[2].strip()
+                if value:
+                    hidden.add(value)
+                hits[(line, "vs-client-server-key")] = RawHit("secrets", "vs-client-server-key", name, line,
+                    "CWE-522", ["CI-05"], "공개 환경변수 예제에 서버 전용 키 이름 선언", CLIENT_REMEDIATION,
+                    Severity.LOW, identity=env[1], evidence=f"{env[1]} · 값 생략")
 
     def add(line, value, known=False, listed=False, why="인증정보 이름의 변수에 들어 있는 문자열", var=None,
             owner=""):
@@ -187,10 +225,13 @@ def detect(name, content, hidden=None):
         rule = 'weak-signing-key' if weak else 'literal-token'
         codes = ['CI-16'] if weak else ['CI-05']
         title = '약한 고정 서명키' if weak else '소스에 포함된 인증정보 후보'
-        critical = service_role(value)
+        role = supabase_role(value)
+        if role == 'anon' or value.startswith('sb_publishable_'):
+            return
+        critical = role == 'service_role' or value.startswith('sb_secret_')
         severity = Severity.CRITICAL if critical else Severity.HIGH
         if critical:
-            codes += ['V-04']; title = '권한이 높은 service_role 키 노출'
+            codes += ['V-04']; title = '권한이 높은 Supabase 서버 키 노출'
         elif sample and not known:
             severity, title = Severity.INFO, '테스트·예제 파일의 인증정보 후보'
         previous = hits.get((line, rule))
@@ -206,6 +247,17 @@ def detect(name, content, hidden=None):
         hits[(line, rule)] = hit
     dynamic_parts = None
     for line, text in enumerate(lines, 1):
+        for binding in CLIENT_BINDING.finditer(text):
+            owner, value = binding[1], binding[3]
+            public = PUBLIC_SERVER_VAR.fullmatch(owner)
+            if not (public or client and PUBLIC_SERVER_VAR.fullmatch("VITE_" + assignment_name(owner).upper())):
+                continue
+            hidden.add(value)
+            if len(value) < 8 or PLACEHOLDER.fullmatch(value) or value.startswith("sb_publishable_"):
+                continue
+            hits[(line, "vs-client-server-key")] = RawHit("secrets", "vs-client-server-key", name, line,
+                "CWE-798", ["CI-05"], "클라이언트 코드에 서버 전용 키 값 포함", CLIENT_REMEDIATION,
+                Severity.HIGH, identity=owner)
         for match in KEY.finditer(text):
             add(line, match.group(), known=True, why="공급자 키 형식의 값")
         if lockfile:
@@ -251,6 +303,9 @@ def detect(name, content, hidden=None):
                 hits[(line, 'literal-token')].secret == hits[(line, rule)].secret):
             hits.pop((line, 'literal-token'), None)
     for hit in hits.values():
+        if client and hit.fix:
+            hit.fix = ""
+            hit.remediation = CLIENT_REMEDIATION
         if hit.fix:
             hit.fix = mask(hit.fix, hidden)
     return list(hits.values())

@@ -80,7 +80,8 @@ def eligible_path(name):
 
 
 def scan_file(path):
-    return (sensitive_kind(path) or path.name in {'.env.example', '.env.sample', 'Dockerfile'}
+    return (sensitive_kind(path) or path.name.lower().endswith('.headers.http')
+            or path.name in {'.env.example', '.env.sample', 'Dockerfile'}
             or (path.suffix.lower() in EXTENSIONS and not path.name.lower().endswith((".min.js", ".min.css"))
                 and not path.name.startswith(".")))
 
@@ -209,6 +210,25 @@ def materialize(destination, path, blob, files):
         keys = re.findall(r'(?m)^(?:export\s+)?([A-Z_][A-Z0-9_]{0,127})\s*=', blob.decode('utf-8', 'replace')) if kind == 'dotenv' else []
         files.sensitive_files.append({'path': name, 'kind': kind, 'keys': sorted(set(keys))})
         return
+    if name.lower().endswith('.headers.http'):
+        # Only persist facts used by the detector. A captured response may also contain session cookies.
+        lines = blob.replace(b'\r\n', b'\n').rstrip(b'\n').split(b'\n')
+        if (not re.fullmatch(rb'HTTP/(?:1\.[01]|2(?:\.0)?|3(?:\.0)?) 2\d\d(?: [^\r\n]*)?', lines[0])
+                or any(not re.fullmatch(rb'[!#$%&\'*+.^_|\x60~A-Za-z0-9-]+:[^\r\n]*', line) for line in lines[1:])):
+            files.skipped.append(name)
+            return
+        headers = {}
+        for line in lines[1:]:
+            key, _, value = line.partition(b':')
+            headers.setdefault(key.lower(), []).append(value.strip().lower())
+        facts = [b'HTTP 2xx']
+        if any(v.split(b';', 1)[0].strip() == b'text/html' for v in headers.get(b'content-type', ())):
+            facts.append(b'html')
+        if any(v for v in headers.get(b'content-security-policy', ())):
+            facts.append(b'csp')
+        if headers.get(b'x-content-type-options') == [b'nosniff']:
+            facts.append(b'nosniff')
+        blob = b'\n'.join(facts)
     try:
         blob.decode("utf-8")
     except UnicodeDecodeError:

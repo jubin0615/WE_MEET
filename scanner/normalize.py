@@ -54,10 +54,12 @@ def code_identity(content, line, python=False):
 def normalize(hits):
     grouped = {}
     for hit in sorted(hits, key=lambda h: (h.file, h.line, h.rule_id)):
-        grouped.setdefault((hit.file, hit.line, hit.cwe), []).append(hit)
+        # Several packages or policy paths may have the same file-level location.
+        subject = hit.identity if hit.detector in {"dependencies", "project"} else ""
+        grouped.setdefault((hit.file, hit.line, hit.cwe, subject), []).append(hit)
     findings = []
     for number, group in enumerate(grouped.values(), 1):
-        hit = min(group, key=lambda h: (list(Severity).index(h.severity), h.rule_id))
+        hit = min(group, key=lambda h: (list(Severity).index(h.severity), h.rule_id != "vs-client-server-key", h.rule_id))
         methods = sorted({f"static:{h.detector}:{h.rule_id}" for h in group})
         confidence = (Confidence.LIKELY if any(h.confidence == Confidence.LIKELY for h in group)
                       else Confidence.POTENTIAL)

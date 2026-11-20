@@ -96,7 +96,7 @@ class Context:
                                 "depth": len(Path(name).parts) - 1})
         originals = {}
         for name in files:
-            self.hidden.update(hidden_values((directory / name).read_text(encoding="utf-8-sig")))
+            self.hidden.update(hidden_values((directory / name).read_text(encoding="utf-8-sig"), name))
             if not name.endswith(".py"):
                 continue
             originals[name] = (directory / name).read_text(encoding="utf-8-sig")

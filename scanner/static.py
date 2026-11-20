@@ -4,7 +4,7 @@ import ast
 import re
 
 from .models import AppProfile
-from .detectors import secrets, config, routes, java
+from .detectors import secrets, config, routes, java, dependencies, project
 from .detectors.semgrep import convert, semgrep
 from .normalize import RawHit, normalize, code_identity
 
@@ -68,7 +68,7 @@ def inspect(directory, files):
     partial = list(getattr(matched, 'partial_files', []))
     if hasattr(matched, 'scanned_files'):
         supported = ('.py', '.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs', '.java',
-                     '.html', '.j2', '.jinja', '.vue', '.svelte', '.astro')
+                     '.html', '.j2', '.jinja', '.vue', '.svelte', '.astro', '.php', '.rb', '.go')
         partial.extend(name for name in allowed - matched.scanned_files if name.lower().endswith(supported))
     if any(name not in allowed for name in partial):
         raise ValueError('부분 실패 파일이 검사 범위 밖입니다.')
@@ -81,6 +81,7 @@ def inspect(directory, files):
             raise ValueError('검사 근거 줄이 파일 범위 밖입니다.')
         hit.identity = code_identity(contents[hit.file], hit.line, hit.file.endswith('.py'))
     route_rows, settings = [], []
+    manifests, pin_count = 0, 0
     if any(name.endswith('.java') for name in contents):
         java_hits, java_routes, java_partial = java.detect(contents)
         raw.extend(java_hits)
@@ -88,6 +89,13 @@ def inspect(directory, files):
         partial.extend(java_partial)
     hidden = {}
     for name, content in contents.items():
+        if dependencies.supported(name):
+            found, count, incomplete = dependencies.detect(name, content)
+            raw.extend(found)
+            manifests += 1
+            pin_count += count
+            if incomplete:
+                partial.append(name)
         hidden[name] = set()
         raw.extend(secrets.detect(name, content, hidden[name]))
         found, summary = config.detect(name, content)
@@ -100,13 +108,19 @@ def inspect(directory, files):
             except (SyntaxError, ValueError):
                 partial.append(name)
                 credential_files.discard(name)
+    found, summary, failures = project.detect(contents, route_rows, getattr(files, 'sensitive_files', ()))
+    raw.extend(found)
+    settings.extend(summary)
+    partial.extend(failures)
     for hit in raw:
         if hit.file in contents:
             if any('\n' in value or 'PRIVATE KEY-----' in value for value in hidden[hit.file]):
                 hit.evidence = '[여러 줄에 걸친 비밀값 보호를 위해 코드 생략]'
                 hit.fix = ''
-            else:
+            elif hit.evidence == '[코드·값 가림]':
                 hit.evidence = excerpt(contents[hit.file], hit.line, hidden[hit.file])
+            else:
+                hit.evidence = secrets.mask(hit.evidence, hidden[hit.file])
     for entry in getattr(files, 'sensitive_files', []) if getattr(files, 'committed', True) else ():
         raw.append(RawHit('secrets', 'vs-secret-file', entry['path'], 1, 'CWE-540', ['CI-05', 'V-01'],
             '민감 파일이 Git HEAD에 포함됨', '실제 자격증명이면 교체하고 추적을 해제하세요. .gitignore 추가만으로 과거 커밋에서 삭제되지 않습니다.',
@@ -116,6 +130,8 @@ def inspect(directory, files):
                     {'vs-js-cors', 'vs-js-cookie', 'vs-js-error'})
     result = Inspection(normalize(raw), partial, route_rows, settings)
     result.credential_files = credential_files
+    result.source_checks = project.coverage(files, partial, route_rows, manifests, pin_count,
+        dependencies.database()["date"])
     result.file_upload = any('request.files' in text or 'UploadFile' in text or 'multer' in text
                              for text in contents.values())
     return result

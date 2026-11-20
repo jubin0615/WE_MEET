@@ -47,6 +47,9 @@ def render(result):
         mode = {"completed": "정적 검사 완료", "unsupported": "지원 Python 소스 없음 · 미검사",
                 "manual": "수동 확인 필요 · 미검사", "partial": "부분 점검 · 수동 확인 포함"}[check["execution"]]
         rows.append(f"- {check['name']} [{mode}]: {check['reason']}")
+    for check in result.source_checks:
+        mode = "부분 점검" if check["execution"] == "partial" else "수동 확인"
+        rows.append(f"- {check['name']} [{mode}] · {check['reason']}")
     rows.extend(["", "## 발견 및 수정 방법"])
     for f in sorted(opened, key=lambda item: list(Severity).index(item.severity)):
         rows.extend(["", f"### {f.id} · {f.severity} · {f.title}", "",
@@ -56,12 +59,15 @@ def render(result):
                      f"- 판정 근거: {f.triage_reason or '로컬 규칙 탐지 · 모델 검토 없음'}",
                      f"- 최초 규칙 심각도: {f.original_severity or f.severity}",
                      f"- 영향: {f.impact_ko}", f"- 수정 방법: {f.remediation_ko}",
-                     "", "근거 코드:", "", "```", f.evidence, "```",
-                     "", f.fix_note, "", "```diff", f.fix_diff, "```"])
+                     "", "근거 코드:", "", "```", f.evidence, "```"])
+        if f.fix_diff:
+            rows.extend(["", f.fix_note, "", "```diff", f.fix_diff, "```"])
         if f.rule_id == 'vs-java-sql-flow' and f.trace:
             rows.append("호출 경로: " + " → ".join(f"{p['file']}:{p['line']} ({p['method']})" for p in f.trace))
         if f.rule_id == 'vs-java-admin-policy' and f.trace:
             rows.append(f"필터 체인 설정: {f.trace[0]['file']}:{f.trace[0]['line']}")
+        if f.rule_id == 'vs-client-only-auth':
+            rows.extend(f"- 화면 호출 근거 · {p['file']}:{p['line']}" for p in f.trace)
     if not opened:
         rows.append("적용한 규칙에서 발견된 항목이 없습니다.")
         if dismissed:
@@ -109,8 +115,7 @@ class ScanInputError(ValueError):
     """A scan the user can fix; its message is safe to show in the dashboard."""
 
 
-# Languages whose files are collected but have no vulnerability rules: only credential checks run on them.
-UNSUPPORTED = {"php": "PHP", "rb": "Ruby", "go": "Go", "kt": "Kotlin"}
+LIMITED = {"php": "PHP", "rb": "Ruby", "go": "Go", "kt": "Kotlin", "vue": "Vue"}
 STAGES = ["코드 수집", "정찰", "점검 계획", "정적 검사", "검토·보고서"]
 
 
@@ -149,11 +154,11 @@ def scan(repo, output, directory, offline=False, trigger=Trigger.MANUAL, progres
         counts = languages(files)
         if counts.get("java"):
             app.limitations.append("Java는 JDBC SQL 호출 경로와 Spring MVC 관리자 경로의 명시적 인가 정책을 점검합니다. 동적 호출·복잡한 조건·운영 권한은 수동 확인 대상입니다.")
-        others = {UNSUPPORTED[k]: n for k, n in counts.items() if k in UNSUPPORTED}
+        others = {LIMITED[k]: n for k, n in counts.items() if k in LIMITED}
         mostly_unsupported = sum(others.values()) > sum(counts.get(k, 0) for k in ("python", "javascript", "typescript", "java"))
         if others:
             names = ", ".join(f"{label} {n}개" for label, n in others.items())
-            app.limitations.insert(0, f"탐지 규칙이 없는 언어의 파일({names})은 인증정보 노출만 확인했고 다른 취약점은 검사하지 않았습니다.")
+            app.limitations.insert(0, f"제한된 규칙을 적용한 파일({names}). PHP·Ruby·Go·Vue는 일부 HTML 출력 처리, Kotlin은 인증정보만 점검합니다.")
         progress(2, "기본 점검 계획 사용" if offline or new_high_only else "ChatGPT에 점검 계획 요청 중")
         if not offline:
             try:
@@ -208,7 +213,7 @@ def scan(repo, output, directory, offline=False, trigger=Trigger.MANUAL, progres
     weights = {Severity.CRITICAL: 40, Severity.HIGH: 20, Severity.MEDIUM: 10,
                Severity.LOW: 3, Severity.INFO: 0}
     if mostly_unsupported:
-        note += f" · 주 언어({', '.join(others)})의 탐지 규칙이 없어 결과가 불완전합니다"
+        note += f" · 주 언어({', '.join(others)})는 규칙 범위가 제한되어 결과가 불완전합니다"
     progress(4, "보고서 저장 중")
     current = list(findings) + kept
     for number, f in enumerate(kept + gone, len(findings) + 1):
@@ -221,10 +226,11 @@ def scan(repo, output, directory, offline=False, trigger=Trigger.MANUAL, progres
                         branch=branch, commit=commit, baseline_commit=previous.commit if matched else None, trigger=trigger,
                         checklist=[c['name'] for c in coverage],
                         analysis_note=note, coverage=coverage,
-                        engine={'version': '0.2.0', 'rulepack': 'vibescan-2026.11.4', 'semgrep': '1.185.0'},
+                        engine={'version': '0.2.0', 'rulepack': 'vibescan-2026.11.5', 'semgrep': '1.185.0'},
                         languages=languages(files), partial_files=partial,
                         sensitive_files=getattr(files, 'sensitive_files', []), routes=getattr(findings, 'routes', []),
-                        config_summary=getattr(findings, 'config_summary', []), kisa_checklist=kisa_rows)
+                        config_summary=getattr(findings, 'config_summary', []), kisa_checklist=kisa_rows,
+                        source_checks=getattr(findings, 'source_checks', []))
     result.report_md = render(result)
     output.mkdir(parents=True, exist_ok=True)
     directory.mkdir(mode=0o700, parents=True, exist_ok=True)

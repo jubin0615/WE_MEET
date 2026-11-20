@@ -54,7 +54,18 @@ python -m bench.check_rules
 python -m bench.run
 ```
 
-벤치마크는 합성 소스의 취약 표본 35개와 안전 표본 22개를 정적으로 검사합니다. CI는 의존성 검사 표본 P35 외에 미탐이 생기거나 안전 표본에서 오탐이 발생하면 실패합니다. 관리자 경로의 안전 표본 S11에는 관리자 전용 가드가 있습니다. 회귀 테스트에서는 로그인만 확인하는 관리자 경로가 계속 검토 후보로 남는지도 검사합니다. 의존성 검사, Django/Next.js 라우트·BaaS 정책·동적 검사는 후속 단계입니다.
+벤치마크는 합성 소스의 취약 표본 35개와 안전 표본 22개를 정적으로 검사합니다. CI는 고정된 Flask 버전의 의존성 표본 P35를 포함해 미탐이나 오탐이 발생하면 실패합니다. 관리자 경로의 안전 표본 S11에는 관리자 전용 가드가 있습니다.
+
+### 일곱 영역의 검사 범위와 검증
+
+기존 5종 AI 계획은 유지하고 엔진이 `source_checks`에 의존성, BaaS, 화면 인증, 클라이언트 키, 언어별 HTML 처리, 서버 설정, 업무 로직의 적용 범위와 한계를 기록합니다. CLI·대시보드·Git hook은 동일한 스캔 함수를 사용합니다. 결과 JSON에 새 필드가 없는 이전 보고서도 열 수 있습니다.
+
+- 의존성은 로컬 GHSA 색인과 확정 버전을 비교합니다. PyPI는 PEP 440, npm은 SemVer 순서를 사용합니다. npm의 전이 의존성은 잠금 파일에 기록된 버전을 읽습니다. 설치 환경·조건부 요구사항의 실제 사용 여부·다른 패키지 관리자는 별도 확인이 필요합니다. 해석할 수 없는 선언과 잘못된 매니페스트는 부분 점검으로 기록합니다.
+- `supabase/migrations/*.sql`은 파일명 순으로 읽고 `supabase/schema.sql`은 별도로 점검합니다. 단순한 테이블명과 명시적 DDL을 대상으로 하며, 동적 SQL·역할·GRANT·대시보드에서 바꾼 정책의 실제 상태는 수동 확인합니다. Firebase는 `*.rules`와 `*.rules.json`의 명시적 무조건 허용을 점검합니다.
+- 화면 가드와 API 연결은 지원하는 인증 변수의 조건문 바로 뒤에 같은 출처의 고정 경로를 호출하는 경우에 적용합니다. 같은 메서드·경로를 등록한 핸들러가 여러 개면 후보 생성을 생략합니다. Nginx 설정과 저장된 응답은 각각 설정 단서와 해당 응답 한 건의 관측 결과입니다. CSP 내용의 적절성, 업무 정책과 실제 배포 환경은 별도 검토합니다.
+- `tests/test_project_checks.py`는 공지의 수정 버전 경계, 후속 SQL 마이그레이션, 동일 경로의 다른 HTTP 메서드, 키 가림, 헤더 표본에서 쿠키 제외, 재검사 이력을 검증합니다. 각 언어의 Semgrep 규칙에는 위험·안전 표본이 있습니다.
+
+내장 색인을 갱신하려면 같은 날짜에 OSV의 [PyPI 배포본](https://osv-vulnerabilities.storage.googleapis.com/PyPI/all.zip)과 [npm 배포본](https://osv-vulnerabilities.storage.googleapis.com/npm/all.zip)을 내려받고 `python tools/build_advisories.py PyPI.zip npm.zip --date YYYY-MM-DD`를 실행하세요. 날짜에는 데이터 수집일(UTC)을 넣습니다. 스캔은 패키지명이나 프로젝트 소스를 조회 서비스에 보내지 않습니다. [원본 데이터와 라이선스](../scanner/ADVISORIES-LICENSE.txt)
 
 [단계별 구현 계획과 검증 기준](sprint1.md)
 
