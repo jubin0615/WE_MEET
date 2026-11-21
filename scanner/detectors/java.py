@@ -139,7 +139,7 @@ def sql_flows(methods, classes, implementations):
             if name in JDBC.get(owner, ()) and args and args[0] and len(args[0]) > 1:
                 line = n.start_point.row + 1
                 hits[method.file, line] = RawHit('java', 'vs-java-sql-flow', method.file, line, 'CWE-89',
-                    ['CI-02'], '메서드 호출을 거쳐 요청값이 JDBC SQL 본문에 도달',
+                    'VS-05', '메서드 호출을 거쳐 요청값이 JDBC SQL 본문에 도달',
                     'SQL 본문을 고정하고 요청값은 바인딩 인자로 전달하세요.', trace=list(args[0]))
             targets = by_signature.get((owner, name, len(args)), ())
             if not targets and owner in implementations:
@@ -465,7 +465,7 @@ def spring_routes(controllers, chains, enabled, partial):
                          'handler': value(field(method.node, 'name')), 'auth_guard': policy or '수동 확인',
                          'admin_guard': policy in ('admin', 'denyAll'), 'note': note, 'policy_source': evidence})
             if admin and policy in ('permitAll', 'authenticated'):
-                hits.append(RawHit('java', 'vs-java-admin-policy', method.file, line, 'CWE-862', ['CI-19'],
+                hits.append(RawHit('java', 'vs-java-admin-policy', method.file, line, 'CWE-862', 'VS-02',
                     '관리자 경로의 Spring 인가 정책 확인 필요',
                     '해당 경로의 역할 제한과 핸들러 내부 검사를 확인하세요.',
                     impact=f'필터 체인과 메서드 보안 단서에서 확인한 정책은 {policy}입니다. {note}', trace=evidence))

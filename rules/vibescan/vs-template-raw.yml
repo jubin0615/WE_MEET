@@ -9,16 +9,15 @@
       "message": "템플릿 자동 이스케이프 해제",
       "metadata": {
         "cwe": "CWE-79",
-        "kisa": [
-          "CI-06"
-        ],
         "vibescan": {
           "title_ko": "템플릿 자동 이스케이프 해제",
           "remediation_ko": "자동 이스케이프를 유지하세요.",
           "severity": "Medium",
           "confidence": "Potential",
           "impact_ko": "템플릿에서 |safe, autoescape false, v-html, {@html}을 쓰면 자동 이스케이프가 꺼집니다. 그 값에 사용자 입력이 섞이면 스크립트가 실행됩니다(XSS).",
-          "fix_example": "-{{ comment.body | safe }}\n+{{ comment.body }}  {# 자동 이스케이프를 유지합니다 #}"
+          "fix_example": "-{{ comment.body | safe }}\n+{{ comment.body }}  {# 자동 이스케이프를 유지합니다 #}",
+          "category": "VS-05",
+          "limitations_ko": "출력 구문과 이스케이프 처리의 정적 단서에 한정하며 실제 렌더링 문맥은 수동 확인합니다."
         }
       },
       "pattern-regex": "\\|\\s*safe\\b|\\{%\\s*autoescape\\s+false\\s*%\\}|v-html\\s*=|(?:v-bind:|:)innerHTML\\s*=|\\{@html\\s+",

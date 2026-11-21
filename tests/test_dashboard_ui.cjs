@@ -93,7 +93,7 @@ function harness({blockedStorage = false, hash = ""} = {}) {
 }
 const finding = (id, severity = "High", extra = {}) => ({
   id, title: "문제 " + id, severity, confidence: "Likely", status: "open", change: "existing",
-  location: {file: "app.py", line: 12}, cwe: "CWE-89", owasp: "A03", evidence: "execute(query)",
+  location: {file: "app.py", line: 12}, cwe: "CWE-89", category: "VS-05", owasp: "A05:2025", evidence: "execute(query)",
   how_found: ["정적 규칙"], impact_ko: "입력값이 쿼리 구조를 바꿉니다.", remediation_ko: "매개변수 바인딩을 사용하세요.",
   fix_diff: "--- a/app.py\n+++ b/app.py\n-query\n+safe_query", ...extra,
 });
@@ -107,6 +107,24 @@ const sample = (id = "scan-a", repo = "C:/a", findings = []) => {
 };
 async function main() {
   const h = harness(), {get, run} = h;
+  const filtered = sample("filters", "C:/a", [finding("sql", "High", {rule_id: "mixed"}),
+    finding("path", "High", {rule_id: "mixed", owasp: "A01:2025", location: {file: "path.js", line: 5}})]);
+  filtered.coverage = [{code: "VS-05", name: "주입", status: "취약 후보", findings: ["sql", "path"]}];
+  filtered.owasp_coverage = [{code: "A05:2025", name: "인젝션", url: "https://top10.owasp.org/2025/A05_2025-Injection/",
+    status: "취약 후보", findings: ["sql"]}, {code: "A01:2025", name: "접근 통제", status: "취약 후보", findings: ["path"]}];
+  h.seed(filtered);
+  assert.match(get("classification-rows").textContent, /VS-05.*2건/);
+  get("classification-view").value = "owasp";
+  get("classification-view").handlers.change();
+  assert.match(get("classification-rows").textContent, /A01:2025/);
+  get("vs-filter").value = "VS-05"; get("owasp-filter").value = "A05:2025";
+  get("owasp-filter").handlers.change();
+  assert.match(get("findings").textContent, /app.py/);
+  assert.doesNotMatch(get("findings").textContent, /path.js/);
+  assert.equal(get("findings").querySelectorAll("*").find(e => e.tagName === "A").href, filtered.owasp_coverage[0].url);
+  get("vs-filter").value = "VS-01"; get("vs-filter").handlers.change();
+  assert.match(get("findings").textContent, /검색 조건/);
+  run("resetFilters()");
   const data = sample("scan-a", "C:/a", [
     finding("critical", "Critical", {status: "dismissed"}),
     finding("fixed", "High", {change: "fixed"}),

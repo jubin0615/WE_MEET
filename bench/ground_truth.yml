@@ -1,401 +1,458 @@
 [
   {
     "id": "P01",
-    "kisa": "CI-16",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 11
+    "line": 11,
+    "category": "VS-06",
+    "cwe": "CWE-321"
   },
   {
     "id": "P02",
-    "kisa": "V-02",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 13
+    "line": 13,
+    "category": "VS-06",
+    "cwe": "CWE-942"
   },
   {
     "id": "P03",
-    "kisa": "CI-05",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 15
+    "line": 15,
+    "category": "VS-01",
+    "cwe": "CWE-798"
   },
   {
     "id": "P04",
-    "kisa": "CI-05",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 17
+    "line": 17,
+    "category": "VS-01",
+    "cwe": "CWE-798"
   },
   {
     "id": "P05",
-    "kisa": "CI-05",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 19
+    "line": 19,
+    "category": "VS-01",
+    "cwe": "CWE-798"
   },
   {
     "id": "P06",
-    "kisa": "CI-02",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 24
+    "line": 24,
+    "category": "VS-05",
+    "cwe": "CWE-89"
   },
   {
     "id": "P07",
-    "kisa": "CI-02",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 27
+    "line": 27,
+    "category": "VS-05",
+    "cwe": "CWE-89"
   },
   {
     "id": "P08",
-    "kisa": "CI-02",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 29
+    "line": 29,
+    "category": "VS-05",
+    "cwe": "CWE-89"
   },
   {
     "id": "P09",
-    "kisa": "CI-02",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 31
+    "line": 31,
+    "category": "VS-05",
+    "cwe": "CWE-89"
   },
   {
     "id": "P10",
-    "kisa": "CI-01",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 38
+    "line": 38,
+    "category": "VS-05",
+    "cwe": "CWE-94"
   },
   {
     "id": "P11",
-    "kisa": "CI-06",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 40
+    "line": 40,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   },
   {
     "id": "P12",
-    "kisa": "CI-01",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 42
+    "line": 42,
+    "category": "VS-05",
+    "cwe": "CWE-94"
   },
   {
     "id": "P13",
-    "kisa": "CI-01",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 44
+    "line": 44,
+    "category": "VS-05",
+    "cwe": "CWE-94"
   },
   {
     "id": "P14",
-    "kisa": "CI-15",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 46
+    "line": 46,
+    "category": "VS-05",
+    "cwe": "CWE-22"
   },
   {
     "id": "P15",
-    "kisa": "CI-08",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 48
+    "line": 48,
+    "category": "VS-05",
+    "cwe": "CWE-918"
   },
   {
     "id": "P16",
-    "kisa": "CI-01",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 50
+    "line": 50,
+    "category": "VS-05",
+    "cwe": "CWE-94"
   },
   {
     "id": "P17",
-    "kisa": "CI-01",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 52
+    "line": 52,
+    "category": "VS-05",
+    "cwe": "CWE-502"
   },
   {
     "id": "P18",
-    "kisa": "CI-16",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 54
+    "line": 54,
+    "category": "VS-02",
+    "cwe": "CWE-347"
   },
   {
     "id": "P19",
-    "kisa": "CI-14",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 57
+    "line": 57,
+    "category": "VS-05",
+    "cwe": "CWE-434"
   },
   {
     "id": "P20",
-    "kisa": "CI-19",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 75
+    "line": 75,
+    "category": "VS-02",
+    "cwe": "CWE-862"
   },
   {
     "id": "P21",
-    "kisa": "CI-11",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 80
+    "line": 80,
+    "category": "VS-02",
+    "cwe": "CWE-639"
   },
   {
     "id": "P22",
-    "kisa": "CI-18",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 85
+    "line": 85,
+    "category": "VS-06",
+    "cwe": "CWE-614"
   },
   {
     "id": "P23",
-    "kisa": "CI-04",
     "expect": "vulnerable",
     "file": "app.py",
-    "line": 90
+    "line": 90,
+    "category": "VS-06",
+    "cwe": "CWE-489"
   },
   {
     "id": "P24",
-    "kisa": "CI-06",
     "expect": "vulnerable",
     "file": "view.html",
-    "line": 2
+    "line": 2,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   },
   {
     "id": "P25",
-    "kisa": "CI-06",
     "expect": "vulnerable",
     "file": "view.html",
-    "line": 4
+    "line": 4,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   },
   {
     "id": "P26",
-    "kisa": "CI-05",
     "expect": "vulnerable",
     "file": "web.jsx",
-    "line": 3
+    "line": 3,
+    "category": "VS-01",
+    "cwe": "CWE-798"
   },
   {
     "id": "P27",
-    "kisa": "CI-05",
     "expect": "vulnerable",
     "file": "web.jsx",
-    "line": 5
+    "line": 5,
+    "category": "VS-01",
+    "cwe": "CWE-798"
   },
   {
     "id": "P28",
-    "kisa": "CI-02",
     "expect": "vulnerable",
     "file": "web.jsx",
-    "line": 9
+    "line": 9,
+    "category": "VS-05",
+    "cwe": "CWE-89"
   },
   {
     "id": "P29",
-    "kisa": "CI-06",
     "expect": "vulnerable",
     "file": "web.jsx",
-    "line": 11
+    "line": 11,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   },
   {
     "id": "P30",
-    "kisa": "CI-01",
     "expect": "vulnerable",
     "file": "web.jsx",
-    "line": 13
+    "line": 13,
+    "category": "VS-05",
+    "cwe": "CWE-94"
   },
   {
     "id": "P31",
-    "kisa": "CI-06",
     "expect": "vulnerable",
     "file": "web.jsx",
-    "line": 22
+    "line": 22,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   },
   {
     "id": "P32",
-    "kisa": "CI-06",
     "expect": "vulnerable",
     "file": "web.jsx",
-    "line": 24
+    "line": 24,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   },
   {
     "id": "P33",
-    "kisa": "CI-05",
     "expect": "vulnerable",
     "file": "web.jsx",
-    "line": 26
+    "line": 26,
+    "category": "VS-01",
+    "cwe": "CWE-798"
   },
   {
     "id": "P34",
-    "kisa": "V-01",
     "expect": "vulnerable",
     "file": ".env",
-    "line": 1
+    "line": 1,
+    "category": "VS-01",
+    "cwe": "CWE-540"
   },
   {
     "id": "P35",
-    "kisa": "V-03",
     "expect": "vulnerable",
     "file": "requirements.txt",
-    "line": 2
+    "line": 2,
+    "category": "VS-04",
+    "cwe": "CWE-1395"
   },
   {
     "id": "S01",
-    "kisa": "CI-02",
     "expect": "safe",
     "file": "app.py",
-    "line": 33
+    "line": 33,
+    "category": "VS-05",
+    "cwe": "CWE-89"
   },
   {
     "id": "S02",
-    "kisa": "CI-06",
     "expect": "safe",
     "file": "app.py",
-    "line": 59
+    "line": 59,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   },
   {
     "id": "S03",
-    "kisa": "CI-01",
     "expect": "safe",
     "file": "app.py",
-    "line": 61
+    "line": 61,
+    "category": "VS-05",
+    "cwe": "CWE-94"
   },
   {
     "id": "S04",
-    "kisa": "CI-15",
     "expect": "safe",
     "file": "app.py",
-    "line": 63
+    "line": 63,
+    "category": "VS-05",
+    "cwe": "CWE-22"
   },
   {
     "id": "S05",
-    "kisa": "CI-08",
     "expect": "safe",
     "file": "app.py",
-    "line": 65
+    "line": 65,
+    "category": "VS-05",
+    "cwe": "CWE-918"
   },
   {
     "id": "S06",
-    "kisa": "CI-01",
     "expect": "safe",
     "file": "app.py",
-    "line": 67
+    "line": 67,
+    "category": "VS-05",
+    "cwe": "CWE-502"
   },
   {
     "id": "S07",
-    "kisa": "CI-16",
     "expect": "safe",
     "file": "app.py",
-    "line": 69
+    "line": 69,
+    "category": "VS-02",
+    "cwe": "CWE-347"
   },
   {
     "id": "S08",
-    "kisa": "CI-14",
     "expect": "safe",
     "file": "app.py",
-    "line": 71
+    "line": 71,
+    "category": "VS-05",
+    "cwe": "CWE-434"
   },
   {
     "id": "S09",
-    "kisa": "CI-18",
     "expect": "safe",
     "file": "app.py",
-    "line": 87
+    "line": 87,
+    "category": "VS-06",
+    "cwe": "CWE-614"
   },
   {
     "id": "S10",
-    "kisa": "CI-04",
     "expect": "safe",
     "file": "app.py",
-    "line": 92
+    "line": 92,
+    "category": "VS-06",
+    "cwe": "CWE-489"
   },
   {
     "id": "S11",
-    "kisa": "CI-19",
     "expect": "safe",
     "file": "app.py",
-    "line": 97
+    "line": 97,
+    "category": "VS-02",
+    "cwe": "CWE-862"
   },
   {
     "id": "S12",
-    "kisa": "CI-11",
     "expect": "safe",
     "file": "app.py",
-    "line": 103
+    "line": 103,
+    "category": "VS-02",
+    "cwe": "CWE-639"
   },
   {
     "id": "S13",
-    "kisa": "CI-05",
     "expect": "safe",
     "file": "app.py",
-    "line": 107
+    "line": 107,
+    "category": "VS-01",
+    "cwe": "CWE-798"
   },
   {
     "id": "S14",
-    "kisa": "CI-16",
     "expect": "safe",
     "file": "app.py",
-    "line": 109
+    "line": 109,
+    "category": "VS-06",
+    "cwe": "CWE-321"
   },
   {
     "id": "S15",
-    "kisa": "V-02",
     "expect": "safe",
     "file": "app.py",
-    "line": 111
+    "line": 111,
+    "category": "VS-06",
+    "cwe": "CWE-942"
   },
   {
     "id": "S16",
-    "kisa": "CI-02",
     "expect": "safe",
     "file": "web.jsx",
-    "line": 15
+    "line": 15,
+    "category": "VS-05",
+    "cwe": "CWE-89"
   },
   {
     "id": "S17",
-    "kisa": "CI-06",
     "expect": "safe",
     "file": "web.jsx",
-    "line": 17
+    "line": 17,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   },
   {
     "id": "S18",
-    "kisa": "CI-01",
     "expect": "safe",
     "file": "web.jsx",
-    "line": 19
+    "line": 19,
+    "category": "VS-05",
+    "cwe": "CWE-94"
   },
   {
     "id": "S19",
-    "kisa": "CI-06",
     "expect": "safe",
     "file": "web.jsx",
-    "line": 28
+    "line": 28,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   },
   {
     "id": "S20",
-    "kisa": "CI-06",
     "expect": "safe",
     "file": "web.jsx",
-    "line": 30
+    "line": 30,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   },
   {
     "id": "S21",
-    "kisa": "CI-05",
     "expect": "safe",
     "file": "web.jsx",
-    "line": 32
+    "line": 32,
+    "category": "VS-01",
+    "cwe": "CWE-798"
   },
   {
     "id": "S22",
-    "kisa": "CI-06",
     "expect": "safe",
     "file": "view.html",
-    "line": 6
+    "line": 6,
+    "category": "VS-05",
+    "cwe": "CWE-79"
   }
 ]

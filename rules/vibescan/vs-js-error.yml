@@ -10,16 +10,15 @@
       "message": "오류 스택의 응답 노출",
       "metadata": {
         "cwe": "CWE-209",
-        "kisa": [
-          "CI-04"
-        ],
         "vibescan": {
           "title_ko": "오류 스택의 응답 노출",
           "remediation_ko": "사용자에게는 일반 오류만 보여주고 상세 스택은 보호된 서버 로그에 남기세요.",
           "severity": "Medium",
           "confidence": "Potential",
           "impact_ko": "오류 스택을 응답으로 보내면 내부 파일 경로, 라이브러리 버전, 쿼리 구조가 노출되어 공격자가 다음 공격을 설계하는 데 쓰입니다.",
-          "fix_example": "-res.status(500).send(err.stack)\n+console.error(err)  // 상세 내용은 서버 로그에만 남깁니다\n+res.status(500).json({ error: \"요청을 처리하지 못했습니다.\" })"
+          "fix_example": "-res.status(500).send(err.stack)\n+console.error(err)  // 상세 내용은 서버 로그에만 남깁니다\n+res.status(500).json({ error: \"요청을 처리하지 못했습니다.\" })",
+          "category": "VS-06",
+          "limitations_ko": "코드에 나타난 설정만 확인하며 배포 시 적용되는 정책은 수동 확인합니다."
         }
       },
       "pattern-either": [

@@ -118,10 +118,10 @@ def detect(name, content):
     hits = []
     for route in rows:
         if ADMIN.search(route['path']) and not route['admin_guard']:
-            hits.append(RawHit('routes', 'vs-route-admin', name, route['line'], 'CWE-862', ['CI-19'],
+            hits.append(RawHit('routes', 'vs-route-admin', name, route['line'], 'CWE-862', 'VS-02',
                 '관리자 라우트의 관리자 권한 검사 미확인', '로그인한 일반 사용자도 차단되는지 핸들러와 상위 미들웨어의 역할 정책을 확인하세요.'))
         if route['path_params'] and route['db_access'] and not route['ownership_check']:
-            hits.append(RawHit('routes', 'vs-route-idor', name, route['line'], 'CWE-639', ['CI-11'],
+            hits.append(RawHit('routes', 'vs-route-idor', name, route['line'], 'CWE-639', 'VS-02',
                 '객체 조회의 소유자 조건 미확인', '조회 대상과 현재 사용자·테넌트의 권한을 서버에서 대조하세요.'))
     for hit in hits:
         hit.identity = code_identity(content, hit.line, name.endswith('.py'))

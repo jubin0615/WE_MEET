@@ -5,13 +5,10 @@ from dataclasses import asdict
 from scanner.models import Confidence, Severity, Status
 from . import inference
 
-CHECKS = {
-    "secrets": ("하드코딩 시크릿", "static", "공급자 패턴·이름·Python 리터럴 및 민감 파일 메타 검사"),
-    "sql": ("SQL 문자열 결합", "static", "Python·JS/TS 및 Java(Spring MVC·Servlet 입력과 JDBC SQL) 정적 규칙"),
-    "xss": ("HTML 이스케이프 생략", "static", "Python·JS/TS·템플릿의 자동 이스케이프 우회 규칙"),
-    "auth": ("인증·인가 정책 확인", "manual", "업무별 권한 정책과 실제 호출 경로 확인 필요"),
-    "headers": ("응답 헤더·쿠키 확인", "manual", "실행 URL의 동적 검사는 후속 범위"),
-}
+from scanner.owasp import catalog
+
+CHECKS = {row["code"]: (row["name"], "manual" if row["code"] in {"VS-08", "VS-09", "VS-10"} else "static",
+                        row["description"]) for row in catalog("vibescan-top10")["items"]}
 
 
 def default_coverage():
@@ -35,11 +32,11 @@ def plan(context, app, token, model):
         '소스 문맥으로 앱을 정찰하고 진단 계획을 작성하라. JSON 형식: '
         '{"summary":"한국어 정찰 요약", "surfaces":[{"id":"제공된 sources id",'
         '"note":"해당 코드의 입력·DB·라우트·인증 단서와 확인 한계"}], '
-        '"checks":[{"id":"secrets|sql|xss|auth|headers", "reason":"이 앱에서 점검할 근거와 초점",'
+        '"checks":[{"id":"VS-01|VS-02|VS-03|VS-04|VS-05|VS-06|VS-07|VS-08|VS-09|VS-10", "reason":"이 앱에서 점검할 근거와 초점",'
         '"source_ids":["관련 sources id"]}]}. '
-        'checks는 5종을 각각 한 번씩 우선순위 순으로 모두 포함한다. 관련 근거가 없으면 source_ids는 빈 배열이다. '
+        'checks는 10종을 각각 한 번씩 우선순위 순으로 모두 포함한다. 관련 근거가 없으면 source_ids는 빈 배열이다. '
         'surfaces에는 제공된 근거만 쓰고 요약도 그 범위로 제한하라. 모듈 import만으로 인증 적용을 단정하지 마라. '
-        'secrets/sql/xss는 각 언어에서 지원하는 고정 규칙만 적용하며 auth/headers는 수동 확인이다. '
+        '계획에는 점검 초점만 제시하고 실제 실행 범위와 분류는 로컬 엔진이 결정한다. '
         'Java는 인증정보, JDBC SQL 호출 경로, Spring MVC 관리자 경로의 명시적 인가 정책을 정적으로 점검한다. '
         '호출되지 않는 정적 표본·함수 인자와 실제 외부 입력을 구별하라. 명령이나 도구 코드를 생성하지 마라.', facts)
     summary = context.clean(text(answer["summary"]))

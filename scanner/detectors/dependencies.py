@@ -129,7 +129,7 @@ def detect(name, content):
     hits = []
     for package, entries in packages.items():
         hits.append(RawHit("dependencies", "vs-dependency-advisory", name, entries[0][0], "CWE-1395",
-            ["V-03"], f"{package} 의존성 버전이 보안 공지에 해당", "각 공지의 수정 버전을 확인하고 잠금 파일도 갱신하세요.",
+            'VS-04', f"{package} 의존성 버전이 보안 공지에 해당", "각 공지의 수정 버전을 확인하고 잠금 파일도 갱신하세요.",
             Severity.MEDIUM, Confidence.LIKELY, evidence="\n".join(row for _, row in entries),
             impact="파일에 선언된 버전이 공지의 영향 범위에 속합니다. 배포 버전과 해당 기능의 사용 여부를 확인하세요.",
             identity=f"{ecosystem}|{package}"))

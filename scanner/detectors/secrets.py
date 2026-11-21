@@ -185,7 +185,7 @@ def detect(name, content, hidden=None):
                 if value:
                     hidden.add(value)
                 hits[(line, "vs-client-server-key")] = RawHit("secrets", "vs-client-server-key", name, line,
-                    "CWE-522", ["CI-05"], "공개 환경변수 예제에 서버 전용 키 이름 선언", CLIENT_REMEDIATION,
+                    "CWE-522", 'VS-01', "공개 환경변수 예제에 서버 전용 키 이름 선언", CLIENT_REMEDIATION,
                     Severity.LOW, identity=env[1], evidence=f"{env[1]} · 값 생략")
 
     def add(line, value, known=False, listed=False, why="인증정보 이름의 변수에 들어 있는 문자열", var=None,
@@ -223,7 +223,7 @@ def detect(name, content, hidden=None):
         weak = signing and len(value) < 32
         hidden.add(value)
         rule = 'weak-signing-key' if weak else 'literal-token'
-        codes = ['CI-16'] if weak else ['CI-05']
+        category = 'VS-06' if weak else 'VS-01'
         title = '약한 고정 서명키' if weak else '소스에 포함된 인증정보 후보'
         role = supabase_role(value)
         if role == 'anon' or value.startswith('sb_publishable_'):
@@ -231,7 +231,7 @@ def detect(name, content, hidden=None):
         critical = role == 'service_role' or value.startswith('sb_secret_')
         severity = Severity.CRITICAL if critical else Severity.HIGH
         if critical:
-            codes += ['V-04']; title = '권한이 높은 Supabase 서버 키 노출'
+            title = '권한이 높은 Supabase 서버 키 노출'
         elif sample and not known:
             severity, title = Severity.INFO, '테스트·예제 파일의 인증정보 후보'
         previous = hits.get((line, rule))
@@ -239,7 +239,7 @@ def detect(name, content, hidden=None):
         if stronger or (previous and previous.severity == severity and (previous.fix or not var)):
             return  # keep the stronger reading of the same line, or the one that can offer a fix
         hit = RawHit('secrets', rule, name, line, 'CWE-321' if weak else 'CWE-798',
-            codes, title, '인증에 쓰이는 값인지 사용처를 확인하세요. 실제 자격증명이면 교체하고 환경변수나 비밀 저장소에서 읽으세요.',
+            category, title, '인증에 쓰이는 값인지 사용처를 확인하세요. 실제 자격증명이면 교체하고 환경변수나 비밀 저장소에서 읽으세요.',
             severity, impact=f"{why}을 발견했습니다. 인증에 사용된다면 저장소를 읽을 수 있는 사람이 해당 값을 사용할 수 있습니다.",
             fix=env_fix(name, lines[line - 1], value, var) if var else "",
             identity=code_identity(content, line, name.endswith('.py')))
@@ -256,7 +256,7 @@ def detect(name, content, hidden=None):
             if len(value) < 8 or PLACEHOLDER.fullmatch(value) or value.startswith("sb_publishable_"):
                 continue
             hits[(line, "vs-client-server-key")] = RawHit("secrets", "vs-client-server-key", name, line,
-                "CWE-798", ["CI-05"], "클라이언트 코드에 서버 전용 키 값 포함", CLIENT_REMEDIATION,
+                "CWE-798", 'VS-01', "클라이언트 코드에 서버 전용 키 값 포함", CLIENT_REMEDIATION,
                 Severity.HIGH, identity=owner)
         for match in KEY.finditer(text):
             add(line, match.group(), known=True, why="공급자 키 형식의 값")

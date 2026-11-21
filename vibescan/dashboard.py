@@ -423,7 +423,7 @@ def dashboard_app(results: Path, address: str, ticket: str, directory: Path | No
 
     @app.get("/assets/{name:path}")
     def asset(name: str):
-        if name not in ("dashboard.css", "dashboard.js",
+        if name not in ("dashboard.css", "dashboard.js", "meet-vibescan.svg",
                         "fonts/PretendardVariable.woff2", "fonts/OFL.txt"):
             raise HTTPException(404)
         return FileResponse(ASSETS / name)
@@ -479,7 +479,7 @@ def serve(results: Path):
         url = f"http://{address}/#{ticket}"
 
         def open_browser():
-            print(f"VibeScan 대시보드: {url}\n종료: Ctrl+C", flush=True)
+            print(f"meet vibescan 대시보드: {url}\n종료: Ctrl+C", flush=True)
             webbrowser.open(url)
 
         # The socket is already listening, so early browser requests can wait for startup.

@@ -10,17 +10,15 @@
       "message": "인증 응답의 과도한 CORS 허용",
       "metadata": {
         "cwe": "CWE-942",
-        "kisa": [
-          "V-02",
-          "CI-05"
-        ],
         "vibescan": {
           "title_ko": "인증 응답의 과도한 CORS 허용",
           "remediation_ko": "신뢰한 Origin만 허용하세요.",
           "severity": "Medium",
           "confidence": "Potential",
           "impact_ko": "모든 Origin을 허용하면서 쿠키(자격 증명)까지 허용하면, 로그인한 사용자가 악성 사이트에 접속하기만 해도 그 사이트가 사용자 권한으로 API를 호출하고 응답을 읽을 수 있습니다.",
-          "fix_example": "-app.use(cors({ origin: true, credentials: true }))\n+app.use(cors({ origin: [\"https://app.example.com\"], credentials: true }))"
+          "fix_example": "-app.use(cors({ origin: true, credentials: true }))\n+app.use(cors({ origin: [\"https://app.example.com\"], credentials: true }))",
+          "category": "VS-06",
+          "limitations_ko": "코드에 나타난 설정만 확인하며 배포 시 적용되는 정책은 수동 확인합니다."
         }
       },
       "pattern-either": [

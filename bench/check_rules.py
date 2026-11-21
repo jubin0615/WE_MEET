@@ -6,17 +6,26 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from scanner.owasp import catalog, classify
+
 
 def main():
     root = Path(__file__).resolve().parents[1] / 'rules/vibescan'
     configs = sorted(root.glob('*.yml'))
     assert configs, 'No bundled rules'
+    categories = {item["code"] for item in catalog("vibescan-top10")["items"]}
+    unmapped = catalog("owasp-top10-2025")["unmapped_cwes"]
     for config in configs:
         rules = json.loads(config.read_text(encoding='utf-8'))['rules']
         fixtures = [p for p in root.glob(config.stem + '.*') if p.suffix in ('.py', '.js', '.html', '.java', '.php', '.rb', '.go')]
         assert fixtures, f'Missing tests: {config.name}'
         content = '\n'.join(p.read_text(encoding='utf-8') for p in fixtures)
         for rule in rules:
+            meta = rule['metadata']
+            detail = meta['vibescan']
+            assert detail['category'] in categories and detail['limitations_ko'].strip(), config.name
+            assert all(detail.get(k) for k in ('title_ko', 'remediation_ko', 'severity', 'confidence')), config.name
+            assert classify(meta['cwe']) or meta['cwe'] in unmapped, config.name
             assert 'ruleid: ' + rule['id'] in content and 'ok: ' + rule['id'] in content
         # Windows Semgrep 1.185's parallel test runner races on its settings file.
         result = subprocess.run([shutil.which('semgrep') or 'semgrep', '--test', '--strict', '--config', str(config),

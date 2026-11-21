@@ -10,6 +10,7 @@ from pathlib import Path
 
 from scanner.ingest import snapshot
 from scanner.static import inspect
+from scanner.owasp import classify
 
 
 def run():
@@ -27,10 +28,15 @@ def run():
         source.mkdir()
         _, _, files = snapshot(repo, source)
         findings = inspect(source, files)
-    detected = {(f.location.file, f.location.line, code) for f in findings for code in f.kisa}
+    detected = {(f.location.file, f.location.line, f.category) for f in findings}
+    classified = {(f.location.file, f.location.line, f.category, f.owasp) for f in findings}
     rows = []
     for item in truth:
-        rows.append({**item, 'detected': (item['file'], item['line'], item['kisa']) in detected})
+        key = item['file'], item['line'], item['category']
+        owasp = classify(item['cwe']) or ''
+        if item['expect'] == 'vulnerable' and key in detected:
+            assert (*key, owasp) in classified, f"Incorrect OWASP classification: {item['id']}"
+        rows.append({**item, 'owasp': owasp, 'detected': key in detected})
     tp = sum(r['expect'] == 'vulnerable' and r['detected'] for r in rows)
     fp = sum(r['expect'] == 'safe' and r['detected'] for r in rows)
     positive = sum(r['expect'] == 'vulnerable' for r in rows)
@@ -41,17 +47,18 @@ def run():
             f'- 탐지: {tp}/{positive} · 안전 표본 오탐: {fp}/{len(rows)-positive}',
             f'- 표본 정밀도: {precision:.3f} · 재현율: {recall:.3f} · F1: {2*precision*recall/(precision+recall) if precision+recall else 0:.3f}',
             f'- 시간: {time.monotonic()-started:.2f}초 · 모델 호출: 0', '',
-            '| 표본 | 분류 | 기대 | 탐지 |', '|---|---|---|---|']
-    text.extend(f"| {r['id']} | {r['kisa']} | {r['expect']} | {r['detected']} |" for r in rows)
+            '| 표본 | VS | OWASP | 기대 | 탐지 |', '|---|---|---|---|---|']
+    text.extend(f"| {r['id']} | {r['category']} | {r['owasp']} | {r['expect']} | {r['detected']} |" for r in rows)
     text += ['', '## 분류별 표본 지표', '', '| 분류 | 탐지/취약 | 안전 표본 오탐 | 정밀도 | 재현율 |', '|---|---|---|---|---|']
-    for code in sorted({r['kisa'] for r in rows}):
-        group = [r for r in rows if r['kisa'] == code]
-        positives = sum(r['expect'] == 'vulnerable' for r in group)
-        found = sum(r['expect'] == 'vulnerable' and r['detected'] for r in group)
-        false = sum(r['expect'] == 'safe' and r['detected'] for r in group)
-        p = f'{found/(found+false):.3f}' if found+false else '미산정'
-        r = f'{found/positives:.3f}' if positives else '미산정'
-        text.append(f'| {code} | {found}/{positives} | {false} | {p} | {r} |')
+    for field in ("category", "owasp"):
+        for code in sorted({r[field] for r in rows}):
+            group = [r for r in rows if r[field] == code]
+            positives = sum(r['expect'] == 'vulnerable' for r in group)
+            found = sum(r['expect'] == 'vulnerable' and r['detected'] for r in group)
+            false = sum(r['expect'] == 'safe' and r['detected'] for r in group)
+            p = f'{found/(found+false):.3f}' if found+false else '미산정'
+            r = f'{found/positives:.3f}' if positives else '미산정'
+            text.append(f'| {code} | {found}/{positives} | {false} | {p} | {r} |')
     text += ['', 'P35는 고정된 Flask 버전을 내장 보안 공지와 대조하는 표본입니다.']
     (base / 'report.md').write_text('\n'.join(text) + '\n', encoding='utf-8')
     print(f'probe={tp}/{positive}, false_positives={fp}, precision={precision:.3f}, recall={recall:.3f}')

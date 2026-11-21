@@ -9,16 +9,15 @@
       "message": "JWT 서명 검증 비활성화",
       "metadata": {
         "cwe": "CWE-347",
-        "kisa": [
-          "CI-16"
-        ],
         "vibescan": {
           "title_ko": "JWT 서명 검증 비활성화",
           "remediation_ko": "고정 알고리즘·키로 서명·만료·발급자·대상을 검증하세요.",
           "severity": "High",
           "confidence": "Potential",
           "impact_ko": "서명 검증을 끄거나 알고리즘 none을 허용하면 누구나 토큰 내용을 바꿔 다른 사용자나 관리자로 행세할 수 있습니다.",
-          "fix_example": "-claims = jwt.decode(token, options={\"verify_signature\": False})\n+claims = jwt.decode(token, SECRET, algorithms=[\"HS256\"], audience=AUD, issuer=ISS)"
+          "fix_example": "-claims = jwt.decode(token, options={\"verify_signature\": False})\n+claims = jwt.decode(token, SECRET, algorithms=[\"HS256\"], audience=AUD, issuer=ISS)",
+          "category": "VS-02",
+          "limitations_ko": "호출부의 검증 옵션만 확인하며 상위 인증 처리와 키 관리는 수동 확인합니다."
         }
       },
       "pattern-either": [

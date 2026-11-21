@@ -93,7 +93,7 @@ class PipelineTests(unittest.TestCase):
                     result = json.loads((folder / "scan_result.json").read_text(encoding="utf-8"))
                     self.assertIn("app.py", result["partial_files"])
                     self.assertEqual(result["delta"]["fixed"], 0)
-                    row = next(r for r in result["kisa_checklist"] if r["code"] == "CI-05")
+                    row = next(r for r in result["coverage"] if r["code"] == "VS-01")
                     self.assertEqual(row["findings"], [result["findings"][0]["id"]])
 
     def test_comparison_follows_branch_and_commit_ancestry(self):
@@ -210,8 +210,8 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(ask.call_count, 1)
         data = json.loads((folder / "scan_result.json").read_text(encoding="utf-8"))
         self.assertEqual(data["findings"], [])
-        self.assertEqual({c["id"] for c in data["coverage"] if c["execution"] == "completed"}, {"secrets", "sql", "xss"})
-        self.assertEqual(next(c for c in data['kisa_checklist'] if c['code']=='V-03')['status'], '수동 확인 필요')
+        self.assertEqual({c["id"] for c in data["coverage"] if c["execution"] == "completed"}, {"VS-01"})
+        self.assertEqual(next(c for c in data['coverage'] if c['code']=='VS-04')['status'], '해당 없음(추정)')
 
     def test_invalid_plan_still_runs_local_checks_and_review(self):
         reply = review_answer([{"id": "F-001", "severity": "High"}])
@@ -223,7 +223,7 @@ class PipelineTests(unittest.TestCase):
         self.assertIn("고정 점검 계획", note)
         self.assertEqual(issue, "error")
         self.assertIn("1/1", note)
-        self.assertEqual(len(json.loads((folder / "scan_result.json").read_text(encoding="utf-8"))["coverage"]), 5)
+        self.assertEqual(len(json.loads((folder / "scan_result.json").read_text(encoding="utf-8"))["coverage"]), 10)
 
     def test_background_review_sends_only_new_high_findings_and_reports_progress(self):
         out, state = self.base / "out", self.base / "state"

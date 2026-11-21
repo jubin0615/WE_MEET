@@ -10,17 +10,15 @@
       "message": "쿠키 보호 속성 비활성화",
       "metadata": {
         "cwe": "CWE-614",
-        "kisa": [
-          "CI-16",
-          "CI-18"
-        ],
         "vibescan": {
           "title_ko": "쿠키 보호 속성 비활성화",
           "remediation_ko": "인증 쿠키의 Secure·HttpOnly·SameSite를 설정하세요.",
           "severity": "Medium",
           "confidence": "Potential",
           "impact_ko": "인증 쿠키에 HttpOnly·Secure·SameSite가 빠지면 XSS로 쿠키를 훔치거나, 암호화되지 않은 연결이나 다른 사이트의 요청으로 세션을 탈취·악용할 수 있습니다.",
-          "fix_example": "-res.cookie(\"session\", token)\n+res.cookie(\"session\", token, { httpOnly: true, secure: true, sameSite: \"lax\" })"
+          "fix_example": "-res.cookie(\"session\", token)\n+res.cookie(\"session\", token, { httpOnly: true, secure: true, sameSite: \"lax\" })",
+          "category": "VS-06",
+          "limitations_ko": "코드에 나타난 설정만 확인하며 배포 시 적용되는 정책은 수동 확인합니다."
         }
       },
       "pattern-either": [

@@ -64,7 +64,7 @@ def convert(hit, allowed):
     confidence = Confidence(detail["confidence"])
     if confidence == Confidence.CONFIRMED:
         raise ValueError("정적 규칙은 악용을 확정할 수 없습니다.")
-    return RawHit("semgrep", hit["check_id"], name, line, meta["cwe"], meta["kisa"],
+    return RawHit("semgrep", hit["check_id"], name, line, meta["cwe"], detail["category"],
                   detail["title_ko"], detail["remediation_ko"], Severity(detail["severity"]),
-                  confidence, fix=detail.get("fix_example", ""),
+                  confidence, owasp_ai=detail.get("owasp_ai", []), fix=detail.get("fix_example", ""),
                   **({"impact": detail["impact_ko"]} if detail.get("impact_ko") else {}))

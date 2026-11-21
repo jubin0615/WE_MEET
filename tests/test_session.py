@@ -114,7 +114,7 @@ class SessionTests(unittest.TestCase):
         markup = next(f for f in result.findings if f.cwe == "CWE-79")
         self.assertIn("문법 확인", markup.fix_note)
         self.assertIn("+    return escape(title)", markup.fix_diff)
-        self.assertEqual(len(result.coverage), 5)
+        self.assertEqual(len(result.coverage), 10)
         self.assertEqual(result.report_md, (folder / "report.md").read_text(encoding="utf-8"))
 
     def test_status_reports_each_login_state_without_network(self):

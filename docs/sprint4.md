@@ -1,5 +1,7 @@
 # Sprint 4 — 결과 중심 대시보드
 
+[확정 진단 로직 원문](obsidian://open?vault=obsidian&file=%EC%9C%84%EB%B0%8B%2Fvibescan-detection-logic)
+
 기준: `feat/sprint3-commit-watch`의 `918cc5c`. Orca 작업 사본과 분리하여 구현한다.
 
 ## 목표와 디자인
@@ -56,4 +58,4 @@ Windows에서는 /tmp 대신 저장소 밖의 쓰기 가능한 폴더를 지정�
 ## 후속 선택 항목
 
 P2 파일별 묶기와 스켈레톤은 이번 변경에 포함하지 않았다. / 검색과 j/k 탐색은 포함했다.
-검사 범위와 한계는 접어서 보존하며, KISA 원문 대조 미완료 항목은 계속 숨긴다.
+홈에는 VS·OWASP별 점검 범위를 표시하고, 상세 보기에는 각 판정의 근거를 제공한다.

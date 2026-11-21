@@ -9,16 +9,15 @@
       "message": "요청값을 신뢰한 HTML로 변환",
       "metadata": {
         "cwe": "CWE-79",
-        "kisa": [
-          "CI-06"
-        ],
         "vibescan": {
           "title_ko": "요청값을 신뢰한 HTML로 변환",
           "remediation_ko": "일반 문자열로 템플릿에 전달해 html/template의 이스케이프를 적용하세요.",
           "severity": "Medium",
           "confidence": "Potential",
           "impact_ko": "html/template이 요청 문자열을 이미 검토한 HTML로 취급해 출력 시 이스케이프를 생략할 수 있습니다.",
-          "fix_example": "-text := template.HTML(r.FormValue(\"text\"))\n+text := r.FormValue(\"text\")"
+          "fix_example": "-text := template.HTML(r.FormValue(\"text\"))\n+text := r.FormValue(\"text\")",
+          "category": "VS-05",
+          "limitations_ko": "출력 구문과 이스케이프 처리의 정적 단서에 한정하며 실제 렌더링 문맥은 수동 확인합니다."
         }
       },
       "pattern-either": [

@@ -13,7 +13,7 @@ from scanner.detectors import config, routes, secrets
 from scanner.detectors.semgrep import Matches, convert, semgrep
 from scanner.history import SCHEMA, save_scan
 from scanner.ingest import snapshot
-from scanner.kisa import checklist, legacy_coverage
+from scanner.coverage import compute
 from scanner.models import Confidence, ScanResult, Status
 from scanner.normalize import RawHit, code_identity, normalize
 from scanner.static import inspect
@@ -32,7 +32,7 @@ class HardeningTests(unittest.TestCase):
         self.assertEqual(a, code_identity(moved, 4, True))
         self.assertNotEqual(a, code_identity(first.replace('SELECT a', 'SELECT b'), 2, True))
         self.assertNotEqual(a, code_identity(first.replace('query', 'other'), 2, True))
-        hit = RawHit('semgrep', 'test-rule', 'app.py', 2, 'CWE-89', ['CI-02'], 'SQL', 'bind', identity=a)
+        hit = RawHit('semgrep', 'test-rule', 'app.py', 2, 'CWE-89', 'VS-05', 'SQL', 'bind', identity=a)
         duplicate = replace(hit, detector='config', confidence=Confidence.LIKELY)
         merged = normalize([hit, duplicate])
         self.assertEqual(len(merged), 1)
@@ -42,8 +42,8 @@ class HardeningTests(unittest.TestCase):
 
     def test_new_metadata_rule_needs_no_code_mapping(self):
         match = {'path': 'app.py', 'start': {'line': 1}, 'check_id': 'new-independent-rule',
-                 'extra': {'metadata': {'cwe': 'CWE-999', 'kisa': ['CI-01'],
-                           'vibescan': {'title_ko': 'New rule', 'remediation_ko': 'Fix',
+                 'extra': {'metadata': {'cwe': 'CWE-999',
+                           'vibescan': {'category': 'VS-05', 'title_ko': 'New rule', 'remediation_ko': 'Fix',
                                         'severity': 'High', 'confidence': 'Potential'}}}}
         hit = convert(match, {'app.py'})
         self.assertEqual(normalize([hit])[0].cwe, 'CWE-999')
@@ -92,7 +92,7 @@ class HardeningTests(unittest.TestCase):
         self.assertEqual(secrets.detect('a.py', 'API_KEY="your-api-key"'), [])
         weak = secrets.detect('a.py', 'SECRET_KEY="dev"')
         self.assertEqual(len(weak), 1)
-        self.assertEqual(weak[0].kisa, ['CI-16'])
+        self.assertEqual(weak[0].category, 'VS-06')
         self.assertTrue(any(h.severity == 'Critical' for h in secrets.detect('a.js', source)))
         (self.root / 'a.js').write_text('const key = "AKIAABCDEFGHIJKLMNOP";', encoding='utf-8')
         (self.root / 'b.py').write_text('value = "AKIAABCDEFGHIJKLMNOP"', encoding='utf-8')
@@ -117,23 +117,40 @@ class HardeningTests(unittest.TestCase):
         raw = (folder / 'scan_result.json').read_text(encoding='utf-8')
         self.assertNotIn('private-never-export', raw)
         result = ScanResult.from_json(raw)
-        self.assertIn('V-01', result.findings[0].kisa)
-        self.assertEqual(len(result.kisa_checklist), 25)
-        # The KISA mapping is internal: users see neither CI/V codes nor the route/config tables.
-        shown = result.report_md + ''.join(c['reason'] for c in result.coverage)
-        for hidden in ('KISA', 'CI-', 'V-01', '엔드포인트 지도', '설정 요약'):
-            self.assertNotIn(hidden, shown)
+        self.assertEqual(result.findings[0].category, 'VS-01')
+        self.assertEqual(result.findings[0].owasp, 'A01:2025')
+        self.assertEqual(len(result.coverage), 10)
+        self.assertEqual(len(result.owasp_coverage), 10)
+        self.assertIn('OWASP Top 10:2025 분류 기준 점검 범위', result.report_md)
+        self.assertIn('VS-01 · CWE-540 · A01:2025', result.report_md)
+        for hidden in ('엔드포인트 지도', '설정 요약'):
+            self.assertNotIn(hidden, result.report_md)
+        legacy = json.loads(raw)
+        legacy['kisa_checklist'] = []
+        legacy.pop('owasp_coverage')
+        legacy['findings'][0].update(kisa=['CI-05'], kisa_reason='old')
+        legacy['findings'][0].pop('category')
+        restored = ScanResult.from_json(json.dumps(legacy))
+        self.assertNotIn('kisa', restored.to_json())
+        from scanner.history import compare
+        recovered, fixed = compare([], restored, 'next', ['.env'])
+        self.assertEqual((recovered[0].category, recovered[0].owasp, fixed), ('VS-01', 'A01:2025', []))
         database = self.root / 'state/scan-history.sqlite3'
         self.assertNotIn(b'private-never-export', database.read_bytes())
         # Existing DB schema migrates without dropping historical scans or finding rows.
         old = self.root / 'old.db'
         with closing(sqlite3.connect(old)) as db:
             db.executescript(SCHEMA)
+            db.execute("ALTER TABLE findings ADD COLUMN kisa TEXT")
+            db.execute("INSERT INTO findings (scan_id,finding_id,severity,confidence,status,cwe,kisa) "
+                       "VALUES ('older','F-001','High','Likely','open','CWE-540','[]')")
+            db.commit()
         save_scan(old, result)
         with closing(sqlite3.connect(old)) as db:
-            row = db.execute('SELECT fingerprint, rule_id, kisa FROM findings').fetchone()
+            row = db.execute('SELECT fingerprint, rule_id, kisa, category, owasp FROM findings WHERE scan_id=?', (result.scan_id,)).fetchone()
+            self.assertEqual(db.execute("SELECT count(*) FROM findings WHERE scan_id='older'").fetchone()[0], 1)
         self.assertEqual(row[0], result.findings[0].fingerprint)
-        self.assertIn('V-01', json.loads(row[2]))
+        self.assertEqual(row[2:], ('[]', 'VS-01', 'A01:2025'))
 
     def test_routes_and_config_are_candidates_not_confirmed(self):
         content = '''from fastapi import APIRouter, Depends
@@ -199,11 +216,11 @@ def identity(user=Depends(get_current_user)): pass
         with patch('scanner.static.semgrep', return_value=Matches([], scanned_files=['checked.py'])):
             found = inspect(self.root, ['checked.py', 'skipped.py', 'Skipped.java', 'notes.txt'])
         self.assertEqual(found.partial_files, ['Skipped.java', 'skipped.py'])
-        finding = normalize([RawHit('semgrep','sql','checked.py',1,'CWE-89',['CI-02'],'SQL','fix')])[0]
-        rows = checklist([finding], {'python': 2}, found.partial_files)
-        sql = next(row for row in rows if row['code'] == 'CI-02')
+        finding = normalize([RawHit('semgrep','sql','checked.py',1,'CWE-89','VS-05','SQL','fix')])[0]
+        rows, _ = compute([finding], {'python': 2}, found.partial_files)
+        sql = next(row for row in rows if row['code'] == 'VS-05')
         self.assertEqual(sql['status'], '취약 후보')
-        self.assertEqual(legacy_coverage([{'id': 'sql'}], rows)[0]['execution'], 'partial')
+        self.assertEqual(sql['execution'], 'partial')
 
     def test_owner_reference_must_constrain_the_returned_query(self):
         code = '''@app.get("/items/<id>")
@@ -234,14 +251,13 @@ app.config["DEBUG"] = True
         self.assertCountEqual([h.line for h in hits], [3, 4, 7])
 
     def test_checklist_never_claims_unsupported_or_dismissed_safe(self):
-        rows = checklist([], {'java': 2}, [])
-        self.assertEqual(len(rows), 25)
-        self.assertEqual(next(r for r in rows if r['code'] == 'CI-02')['status'], '자동 점검 범위 내 미발견')
-        self.assertEqual(next(r for r in rows if r['code'] == 'CI-06')['status'], '부분 점검')
-        self.assertTrue(all(r['source_verified'] is False for r in rows))
-        finding = normalize([RawHit('secrets','key','a.py',1,'CWE-798',['CI-05'],'key','rotate')])[0]
+        rows, web = compute([], {'java': 2}, [])
+        self.assertEqual(len(rows), 10)
+        self.assertEqual(next(r for r in rows if r['code'] == 'VS-05')['status'], '부분 점검')
+        self.assertEqual(next(r for r in web if r['code'] == 'A09:2025')['status'], '수동 확인 필요')
+        finding = normalize([RawHit('secrets','key','a.py',1,'CWE-798','VS-01','key','rotate')])[0]
         finding.status = Status.DISMISSED
-        self.assertEqual(next(r for r in checklist([finding], {'python': 1}, []) if r['code']=='CI-05')['findings'], [])
+        self.assertEqual(next(r for r in compute([finding], {'python': 1}, [])[0] if r['code']=='VS-01')['findings'], [])
 
     def test_identifier_slugs_and_sample_files_do_not_inflate_secret_findings(self):
         found = lambda name, text: [(h.line, h.severity.value) for h in secrets.detect(name, text)]

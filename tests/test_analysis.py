@@ -86,7 +86,7 @@ token2 = f"prefix-secret-{설명}"
         with patch.object(analysis.inference, "ask", side_effect=respond):
             coverage = analysis.plan(self.context, app, "t", "m")
         self.assertEqual({c["id"] for c in coverage}, set(analysis.CHECKS))
-        self.assertEqual([c["id"] for c in coverage if c["mode"] == "manual"], ["auth", "headers"])
+        self.assertEqual([c["id"] for c in coverage if c["mode"] == "manual"], ["VS-08", "VS-09", "VS-10"])
         self.assertTrue(any(s["kind"] == "input" for s in app.surfaces))
         self.assertTrue(any(s["kind"] == "database" for s in app.surfaces))
 

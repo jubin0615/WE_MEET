@@ -16,7 +16,7 @@ import requests
 from scanner.history import compare, evidence_files, list_scans, save_scan
 from scanner.context import Context
 from scanner.ingest import git, snapshot, languages
-from scanner.kisa import checklist, legacy_coverage
+from scanner.coverage import compute
 from scanner.models import Change, ScanResult, Severity, Status, Target, Trigger
 from scanner.static import inspect, profile
 from . import analysis, inference
@@ -44,18 +44,25 @@ def render(result):
     rows.extend("- " + s for s in result.profile.limitations)
     rows.extend(["", "## 점검 계획과 범위"])
     for check in result.coverage:
-        mode = {"completed": "정적 검사 완료", "unsupported": "지원 Python 소스 없음 · 미검사",
-                "manual": "수동 확인 필요 · 미검사", "partial": "부분 점검 · 수동 확인 포함"}[check["execution"]]
-        rows.append(f"- {check['name']} [{mode}]: {check['reason']}")
+        rows.append(f"- {check.get('code', '')} {check['name']} [{check.get('status', check['execution'])}] · {check['reason']}")
+        if check.get("plan_reason") and result.profile.analysis_ko:
+            sources = ", ".join(check.get("source_ids", [])) or "참조 위치 없음"
+            rows.append(f"  - 점검 계획 ({sources}) · {check['plan_reason']}")
     for check in result.source_checks:
         mode = "부분 점검" if check["execution"] == "partial" else "수동 확인"
         rows.append(f"- {check['name']} [{mode}] · {check['reason']}")
+    if result.owasp_coverage:
+        rows.extend(["", "## OWASP Top 10:2025 분류 기준 점검 범위", "",
+                     "| 분류 | 관련 VS | 정적 점검 도달도 | 이번 점검 | 근거 |", "|---|---|---|---|---|"])
+        for item in result.owasp_coverage:
+            rows.append(f"| {item['code']} {item['name']} | {', '.join(item['related_vs']) or '—'} | "
+                        f"{item['static_reach']} | {item['status']} | {item['reason']} |")
     rows.extend(["", "## 발견 및 수정 방법"])
     for f in sorted(opened, key=lambda item: list(Severity).index(item.severity)):
         rows.extend(["", f"### {f.id} · {f.severity} · {f.title}", "",
                      f"- 위치: `{f.location.file}:{f.location.line}`",
                      f"- 탐지 방식: {', '.join(f.how_found)}",
-                     f"- 분류: {f.cwe} · {f.owasp} · {f.confidence}",
+                     f"- 분류: {f.category or '분류 미기록'} · {f.cwe} · {f.owasp or 'OWASP 미매핑'} · {f.confidence}",
                      f"- 판정 근거: {f.triage_reason or '로컬 규칙 탐지 · 모델 검토 없음'}",
                      f"- 최초 규칙 심각도: {f.original_severity or f.severity}",
                      f"- 영향: {f.impact_ko}", f"- 수정 방법: {f.remediation_ko}",
@@ -218,8 +225,7 @@ def scan(repo, output, directory, offline=False, trigger=Trigger.MANUAL, progres
     current = list(findings) + kept
     for number, f in enumerate(kept + gone, len(findings) + 1):
         f.id = f"F-{number:03}"
-    kisa_rows = checklist(findings, languages(files), partial, carried=kept)
-    coverage = legacy_coverage(coverage, kisa_rows)
+    coverage, owasp_rows = compute(findings, counts, partial, carried=kept, plan=coverage)
     app.routes = len(getattr(findings, 'routes', [])) or app.routes
     result = ScanResult(scan_id, repo.name, datetime.now(timezone.utc), Target(str(repo)),
                         min(100, sum(weights[f.severity] for f in current if f.status == Status.OPEN)), app, current + gone, "",
@@ -229,7 +235,7 @@ def scan(repo, output, directory, offline=False, trigger=Trigger.MANUAL, progres
                         engine={'version': '0.2.0', 'rulepack': 'vibescan-2026.11.5', 'semgrep': '1.185.0'},
                         languages=languages(files), partial_files=partial,
                         sensitive_files=getattr(files, 'sensitive_files', []), routes=getattr(findings, 'routes', []),
-                        config_summary=getattr(findings, 'config_summary', []), kisa_checklist=kisa_rows,
+                        config_summary=getattr(findings, 'config_summary', []), owasp_coverage=owasp_rows,
                         source_checks=getattr(findings, 'source_checks', []))
     result.report_md = render(result)
     output.mkdir(parents=True, exist_ok=True)

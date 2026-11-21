@@ -1,13 +1,32 @@
 """커밋별 스캔과 발견 메타데이터를 로컬 SQLite 파일에 보관한다."""
 
 import sqlite3
-import json
 from contextlib import closing
 from dataclasses import replace
 from datetime import timezone
 from pathlib import Path
 
 from .models import Change, ScanResult
+from .owasp import classify
+
+
+# Frozen rule IDs for carrying findings from reports written before VS classification.
+LEGACY_CATEGORIES = {rule: code for code, rules in {
+    'VS-01': ('literal-token', 'vs-client-server-key', 'vs-secret-file',),
+    'VS-02': ('vs-client-only-auth', 'vs-java-admin-policy', 'vs-js-jwt', 'vs-py-jwt', 'vs-route-admin',
+              'vs-route-idor',),
+    'VS-03': ('vs-firebase-public', 'vs-rls-policy-true', 'vs-supabase-rls',),
+    'VS-04': ('vs-dependency-advisory',),
+    'VS-05': ('concatenated-select', 'unescaped-markup', 'vs-go-request-html', 'vs-java-sql',
+              'vs-java-sql-flow', 'vs-js-code', 'vs-js-path', 'vs-js-react-html', 'vs-js-sql',
+              'vs-js-xss', 'vs-php-request-html', 'vs-py-code', 'vs-py-path', 'vs-py-sql',
+              'vs-py-ssrf', 'vs-py-upload', 'vs-py-xss', 'vs-py-yaml', 'vs-ruby-request-html',
+              'vs-template-raw',),
+    'VS-06': ('vs-config-cookie-flags', 'vs-config-cors', 'vs-config-debug', 'vs-js-cookie', 'vs-js-cors',
+              'vs-js-error', 'vs-nginx-autoindex', 'vs-nginx-hsts-zero', 'vs-response-headers',
+              'weak-signing-key',),
+    'VS-07': ('vs-js-payment-amount',),
+}.items() for rule in rules}
 
 
 SCHEMA = """
@@ -48,11 +67,13 @@ def save_scan(database: Path, result: ScanResult) -> None:
     with closing(sqlite3.connect(database)) as db:
         db.execute("PRAGMA foreign_keys = ON")
         db.executescript(SCHEMA)
-        columns = {row[1] for row in db.execute("PRAGMA table_info(findings)")}
-        for column in ("fingerprint", "rule_id", "kisa"):
-            if column not in columns:
-                db.execute(f"ALTER TABLE findings ADD COLUMN {column} TEXT")
         with db:
+            # Serialize column discovery with migration if two scans finish together.
+            db.execute("BEGIN IMMEDIATE")
+            columns = {row[1] for row in db.execute("PRAGMA table_info(findings)")}
+            for column in ("fingerprint", "rule_id", "kisa", "category", "owasp"):
+                if column not in columns:
+                    db.execute(f"ALTER TABLE findings ADD COLUMN {column} TEXT")
             db.execute("""
                 INSERT INTO scans (scan_id, repo_name, repo_path, branch, commit_sha,
                     baseline_commit, scan_type, scan_trigger, scanned_at, risk_score,
@@ -64,11 +85,11 @@ def save_scan(database: Path, result: ScanResult) -> None:
                   result.risk_score, data["delta"]["new"], data["delta"]["fixed"]))
             db.executemany("""
                 INSERT INTO findings (scan_id, finding_id, severity, confidence, status,
-                    change, introduced_in, cwe, file, line, fingerprint, rule_id, kisa)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    change, introduced_in, cwe, file, line, fingerprint, rule_id, kisa, category, owasp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, ((result.scan_id, f.id, f.severity, f.confidence, f.status,
                    f.change, f.introduced_in, f.cwe, f.location.file, f.location.line,
-                   f.fingerprint, f.rule_id, json.dumps(f.kisa))
+                   f.fingerprint, f.rule_id, "[]", f.category, f.owasp)
                   for f in result.findings))
 
 
@@ -121,5 +142,8 @@ def compare(findings, previous, commit, partial_files=(), credential_files=()):
             historical = replace(f, change=Change.EXISTING if unresolved else Change.FIXED,
                                  evidence='[이전 검사 위치 · 현재 커밋 근거 코드 없음]', fix_diff='',
                                  fix_note='현재 커밋에서 재검증한 수정 예시 없음')
+            if not historical.category and historical.rule_id in LEGACY_CATEGORIES:
+                historical.category = LEGACY_CATEGORIES[historical.rule_id]
+                historical.owasp = classify(historical.cwe) or ""
             (kept if unresolved else gone).append(historical)
     return kept, gone

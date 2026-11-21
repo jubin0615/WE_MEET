@@ -23,9 +23,9 @@ packages = ["scanner", "scanner.detectors", "vibescan"]
 
 [tool.setuptools.package-data]
 scanner = ["advisories.json.gz", "ADVISORIES-LICENSE.txt"]
-vibescan = ["web/*.html", "web/*.css", "web/*.js", "web/fonts/*.woff2", "web/fonts/OFL.txt"]
+vibescan = ["web/*.html", "web/*.svg", "web/*.css", "web/*.js", "web/fonts/*.woff2", "web/fonts/OFL.txt"]
 
 [tool.setuptools.data-files]
-"share/vibescan" = ["rules/catalog/kisa-2026-web.yml"]
+"share/vibescan" = ["rules/catalog/owasp-top10-2025.yml", "rules/catalog/owasp-ai.yml", "rules/catalog/vibescan-top10.yml"]
 "share/vibescan/rules" = ["rules/vibescan/*.yml"]
 

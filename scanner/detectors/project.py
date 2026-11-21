@@ -62,8 +62,8 @@ def detect(contents, route_rows, sensitive_files):
     for route in route_rows:
         by_endpoint[(route["method"], route["path"])].append(route)
 
-    def add(rule, file, line, cwe, codes, title, advice, identity, **kwargs):
-        hits.append(RawHit("project", rule, file, line, cwe, codes, title, advice,
+    def add(rule, file, line, cwe, category, title, advice, identity, **kwargs):
+        hits.append(RawHit("project", rule, file, line, cwe, category, title, advice,
                            Severity.MEDIUM, identity=identity, **kwargs))
 
     for name, source in sorted(contents.items()):
@@ -115,7 +115,7 @@ def detect(contents, route_rows, sensitive_files):
                     path, node = pending.pop()
                     for key, value in node.items():
                         if key in {".read", ".write"} and (value is True or value == "true"):
-                            add("vs-firebase-public", name, 1, "CWE-862", ["V-04"],
+                            add("vs-firebase-public", name, 1, "CWE-862", 'VS-03',
                                 "인증 조건 없이 허용하는 Realtime Database 규칙",
                                 "해당 경로와 하위 경로에 적용되는 읽기·쓰기 권한을 확인하세요.", f"{path}/{key}",
                                 evidence=f"rules{path}/{key} = true · 파일 단위 근거")
@@ -127,7 +127,7 @@ def detect(contents, route_rows, sensitive_files):
             code = routes.JS_TOKENS.sub(blank, source)
             if re.search(r'\bservice\s+(?:cloud\.firestore|firebase\.storage)\b', code):
                 for match in FIREBASE.finditer(code):
-                    add("vs-firebase-public", name, code.count("\n", 0, match.start()) + 1, "CWE-862", ["V-04"],
+                    add("vs-firebase-public", name, code.count("\n", 0, match.start()) + 1, "CWE-862", 'VS-03',
                         "인증 조건 없이 허용하는 Firebase 규칙", "해당 경로가 공개 대상인지 확인하고 필요한 사용자·소유자 조건을 적용하세요.", match[0])
         elif name.lower().endswith(".headers.http"):
             facts = set(source.splitlines())
@@ -137,7 +137,7 @@ def detect(contents, route_rows, sensitive_files):
             if "nosniff" not in facts:
                 missing.append("X-Content-Type-Options: nosniff")
             if missing:
-                add("vs-response-headers", name, 1, "CWE-693", [], "저장한 응답의 보안 헤더 확인 필요",
+                add("vs-response-headers", name, 1, "CWE-693", "VS-06", "저장한 응답의 보안 헤더 확인 필요",
                     "해당 응답 형식에 필요한 헤더를 설정하고 새 응답을 저장해 다시 확인하세요.", "response-headers",
                     evidence="2xx 응답에서 확인되지 않은 보호 설정 · " + ", ".join(missing))
                 hits[-1].severity = Severity.LOW
@@ -147,7 +147,7 @@ def detect(contents, route_rows, sensitive_files):
                 line = code.count("\n", 0, match.start("setting")) + 1
                 listing = match["setting"].lower().startswith("autoindex")
                 rule = "vs-nginx-autoindex" if listing else "vs-nginx-hsts-zero"
-                add(rule, name, line, "CWE-548" if listing else "CWE-319", ["CI-03" if listing else "CI-17"],
+                add(rule, name, line, "CWE-548" if listing else "CWE-319", "VS-06",
                     "Nginx 디렉터리 목록 표시" if listing else "Nginx HSTS 만료 시간 0",
                     "적용되는 server/location과 배포 응답을 확인하고 서비스에 필요한 보호 설정을 적용하세요.", match["setting"])
                 settings.append(dict(file=name, line=line, setting=rule, value="배포 적용 확인 필요"))
@@ -155,7 +155,7 @@ def detect(contents, route_rows, sensitive_files):
             continue
         code = routes.JS_TOKENS.sub(blank, source)
         for ref in PUBLIC_REF.finditer(code):
-            add("vs-client-server-key", name, code.count("\n", 0, ref.start()) + 1, "CWE-522", ["CI-05"],
+            add("vs-client-server-key", name, code.count("\n", 0, ref.start()) + 1, "CWE-522", 'VS-01',
                 "공개 환경변수에서 서버 전용 자격증명 참조", secrets.CLIENT_REMEDIATION, ref[1])
         if not (secrets.client_module(name, source) or name.endswith((".jsx", ".tsx")) or
                 re.search(r'\b(?:document|window)\.', code)):
@@ -169,23 +169,23 @@ def detect(contents, route_rows, sensitive_files):
             if len(rows) != 1 or rows[0]["auth_guard"]:
                 continue
             route = rows[0]
-            add("vs-client-only-auth", route["file"], route["line"], "CWE-306", ["CI-10"],
+            add("vs-client-only-auth", route["file"], route["line"], "CWE-306", 'VS-02',
                 "화면에서 인증을 확인한 API의 서버 가드 미확인", "서버 핸들러와 상위 미들웨어에서 세션·권한 검사를 확인하세요.",
                 f"{method} {path}", trace=[dict(file=name, line=code.count("\n", 0, guard.start()) + 1, method="화면 인증 후 API 호출")])
 
     for (_, _, table), table_policies in policies.items():
         for policy_name, state in table_policies.items():
             for name, line in sorted(set(state.values())):
-                add("vs-rls-policy-true", name, line, "CWE-862", ["V-04"], "항상 참인 RLS 정책 조건",
+                add("vs-rls-policy-true", name, line, "CWE-862", 'VS-03', "항상 참인 RLS 정책 조건",
                     "정책의 대상 역할과 명령, 공개 의도를 확인하고 행 소유자 조건을 검토하세요.", f"{table}/{policy_name}")
     for name, line, table, disabled in filter(None, tables.values()):
-        add("vs-supabase-rls", name, line, "CWE-862", ["V-04"],
+        add("vs-supabase-rls", name, line, "CWE-862", 'VS-03',
             f"{table} 테이블 RLS " + ("명시적 비활성화" if disabled else "활성화 구문 미확인"),
             "배포 대상 스키마의 RLS 상태와 API 역할의 테이블 권한을 확인하세요.", table)
     for entry in sensitive_files:
         for key in entry.get("keys", []):
             if secrets.PUBLIC_SERVER_VAR.fullmatch(key):
-                add("vs-client-server-key", entry["path"], 1, "CWE-522", ["CI-05"],
+                add("vs-client-server-key", entry["path"], 1, "CWE-522", 'VS-01',
                     "공개 환경변수에 서버 전용 키 이름 선언", secrets.CLIENT_REMEDIATION, key,
                     evidence=f"{key} · 파일 단위 키 이름만 수집")
     return hits, settings, partial

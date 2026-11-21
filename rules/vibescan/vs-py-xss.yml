@@ -9,16 +9,15 @@
       "message": "외부 입력의 HTML 이스케이프 생략",
       "metadata": {
         "cwe": "CWE-79",
-        "kisa": [
-          "CI-06"
-        ],
         "vibescan": {
           "title_ko": "외부 입력의 HTML 이스케이프 생략",
           "remediation_ko": "자동 이스케이프를 유지하세요.",
           "severity": "Medium",
           "confidence": "Likely",
           "impact_ko": "요청 값을 이스케이프 없이 HTML로 응답합니다. 공격자가 만든 링크를 연 사용자의 브라우저에서 스크립트가 실행됩니다(XSS).",
-          "fix_example": "-return f\"<h1>{request.args['name']}</h1>\"\n+return render_template(\"hello.html\", name=request.args[\"name\"])  # 템플릿 자동 이스케이프"
+          "fix_example": "-return f\"<h1>{request.args['name']}</h1>\"\n+return render_template(\"hello.html\", name=request.args[\"name\"])  # 템플릿 자동 이스케이프",
+          "category": "VS-05",
+          "limitations_ko": "출력 구문과 이스케이프 처리의 정적 단서에 한정하며 실제 렌더링 문맥은 수동 확인합니다."
         }
       },
       "mode": "taint",

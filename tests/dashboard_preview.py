@@ -11,26 +11,29 @@ from pathlib import Path
 
 def samples():
     titles = [
-        ("Critical", "SQL 문자열 결합으로 사용자 입력이 쿼리에 포함됨", "app/api/search.py", 42),
-        ("High", "관리자 API에서 권한 검사 없이 사용자 정보 조회", "app/api/admin.py", 87),
-        ("High", "파일 다운로드 경로에 외부 입력을 그대로 사용", "app/api/download.py", 31),
-        ("Medium", "세션 쿠키의 Secure 속성이 설정되지 않음", "config/session.py", 18),
-        ("Medium", "허용 출처가 제한되지 않은 교차 출처 요청", "app/middleware/cors.py", 24),
-        ("Low", "오류 응답에 내부 경로가 포함될 수 있음", "app/errors.py", 56),
-        ("Low", "쿠키 만료 시간이 명시되지 않음", "config/cookies.py", 12),
-        ("Info", "로그인 경로의 요청 제한 정책 수동 확인 필요", "app/api/auth.py", 103),
-        ("Info", "업로드 파일 검사 정책 수동 확인 필요", "app/api/uploads.py", 64),
-        ("Info", "민감한 기능의 감사 로그 확인 필요", "app/services/audit.py", 28),
-        ("Info", "운영 환경의 HTTPS 적용 여부 확인 필요", "config/server.py", 9),
-        ("Info", "백업 데이터 접근 제어 수동 확인 필요", "app/services/backup.py", 72),
+        ("Critical", "SQL 문자열 결합으로 사용자 입력이 쿼리에 포함됨", "app/api/search.py", 42, "VS-05", "CWE-89"),
+        ("High", "관리자 API에서 권한 검사 없이 사용자 정보 조회", "app/api/admin.py", 87, "VS-02", "CWE-862"),
+        ("High", "파일 다운로드 경로에 외부 입력을 그대로 사용", "app/api/download.py", 31, "VS-05", "CWE-22"),
+        ("Medium", "세션 쿠키의 Secure 속성이 설정되지 않음", "config/session.py", 18, "VS-06", "CWE-614"),
+        ("Medium", "허용 출처가 제한되지 않은 교차 출처 요청", "app/middleware/cors.py", 24, "VS-06", "CWE-942"),
+        ("Low", "오류 응답에 내부 경로가 포함될 수 있음", "app/errors.py", 56, "VS-06", "CWE-209"),
+        ("Low", "쿠키 만료 시간이 명시되지 않음", "config/cookies.py", 12, "VS-06", "CWE-613"),
+        ("Info", "로그인 경로의 요청 제한 정책 수동 확인 필요", "app/api/auth.py", 103, "VS-08", "CWE-307"),
+        ("Info", "업로드 파일 검사 정책 수동 확인 필요", "app/api/uploads.py", 64, "VS-08", "CWE-770"),
+        ("Info", "민감한 기능의 감사 로그 확인 필요", "app/services/audit.py", 28, "VS-06", "CWE-778"),
+        ("Info", "운영 환경의 HTTPS 적용 여부 확인 필요", "config/server.py", 9, "VS-06", "CWE-319"),
+        ("Info", "백업 데이터 접근 제어 수동 확인 필요", "app/services/backup.py", 72, "VS-02", "CWE-284"),
     ]
     findings = []
-    for index, (severity, title, file, line) in enumerate(titles):
+    catalogs = Path(__file__).resolve().parents[1] / "rules/catalog"
+    web = json.loads((catalogs / "owasp-top10-2025.yml").read_text(encoding="utf8"))["items"]
+    owasp_codes = {cwe: item["code"] for item in web for cwe in item["cwes"]}
+    for index, (severity, title, file, line, category, cwe) in enumerate(titles):
         findings.append(dict(
             id=f"F-{index + 1:03}", title=title, severity=severity, confidence="Likely",
             status="open", change="new" if index == 0 else "existing", introduced_in="a1b2c3d4",
             original_severity=severity, location=dict(file=file, line=line),
-            cwe="CWE-89" if index == 0 else "CWE-284", owasp="A03:2021" if index == 0 else "A01:2021",
+            cwe=cwe, owasp=owasp_codes.get(cwe, ""), category=category,
             evidence='query = "SELECT * FROM notes WHERE title = \'" + title + "\'"\nrows = db.execute(query)',
             how_found=["정적 규칙 탐지", "사용자 입력에서 쿼리 실행까지의 흐름 확인"],
             impact_ko="사용자가 입력한 값이 SQL 구문의 일부로 합쳐집니다. 공격자가 쿼리 구조를 바꾸면 허용되지 않은 데이터를 조회할 수 있습니다.",
@@ -56,8 +59,6 @@ def samples():
         baseline_commit="8f20c6a12345", risk_score=100, findings=findings, summary=summary,
         delta=dict(new=1, fixed=3), dismissed_count=2, analysis_note="모델 점검 계획 적용 · 한국어 상세 검토 12/12건",
         profile=dict(framework="Flask", routes=8, auth="세션 인증", limitations=["정적 검사 결과이며 안전을 보증하지 않습니다.", "실제 실행 환경과 권한 정책은 수동 확인이 필요합니다."]),
-        coverage=[dict(name=name, execution="manual" if i == 4 else "completed", reason="자동 점검 범위 확인" if i != 4 else "실행 환경 확인 필요")
-                  for i, name in enumerate(["입력값 처리", "인증·권한", "비밀값", "보안 설정", "배포 환경"])],
         report_md="# VibeScan 데모 보고서\n\n실제 진단 결과가 아닌 화면 검증용 데이터입니다.",
         trigger="git-hook", scan_type="full",
     )
@@ -76,6 +77,16 @@ def samples():
     failed = copy.deepcopy(common)
     failed.update(scan_id="ai-failed", repo=dict(name="legacy-api", path="C:/demo/legacy", branch="develop"),
                   scanned_at="2026-11-19T00:00:00Z", analysis_note="모델 분석 확인 실패 · 로컬 규칙 결과 유지")
+    for scan in scans + [clean, failed]:
+        for field, filename, key in (("coverage", "vibescan-top10", "category"),
+                                     ("owasp_coverage", "owasp-top10-2025", "owasp")):
+            rows = json.loads((catalogs / (filename + ".yml")).read_text(encoding="utf8"))["items"]
+            scan[field] = []
+            for row in rows:
+                ids = [f["id"] for f in scan["findings"] if f[key] == row["code"] and f["status"] == "open"]
+                scan[field].append(dict(code=row["code"], name=row.get("name_ko", row["name"]),
+                                        status="취약 후보" if ids else "부분 점검", execution="partial",
+                                        findings=ids, reason="화면 검증용 표본", url=row.get("url")))
     return sorted(scans + [clean, failed], key=lambda scan: scan["scanned_at"], reverse=True)
 
 

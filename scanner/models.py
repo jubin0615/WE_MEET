@@ -72,11 +72,10 @@ class Finding:
     fix_note: str = "로컬 참고 예시 · 실제 코드 문맥에서 검토 필요"
     rule_id: str = ""
     fingerprint: str = ""
-    kisa: list[str] = field(default_factory=list)
+    owasp_ai: list[str] = field(default_factory=list)
     category: str = ""
     detector: str = ""
     trace: list[dict] = field(default_factory=list)
-    kisa_reason: str = ""
 
 
 @dataclass
@@ -121,7 +120,7 @@ class ScanResult:
     sensitive_files: list[dict] = field(default_factory=list)
     routes: list[dict] = field(default_factory=list)
     config_summary: list[dict] = field(default_factory=list)
-    kisa_checklist: list[dict] = field(default_factory=list)
+    owasp_coverage: list[dict] = field(default_factory=list)
     source_checks: list[dict] = field(default_factory=list)
 
     @classmethod
@@ -132,6 +131,8 @@ class ScanResult:
         findings = []
         for item in data["findings"]:
             fields = dict(item)
+            fields.pop("kisa", None)
+            fields.pop("kisa_reason", None)
             fields.update(
                 location=Location(**item["location"]),
                 severity=Severity(item["severity"]),
@@ -152,7 +153,7 @@ class ScanResult:
             checklist=data.get("checklist", []), analysis_note=data.get("analysis_note", ""),
             coverage=data.get("coverage", []),
             **{key: data[key] for key in ("engine", "languages", "partial_files", "sensitive_files",
-                                        "routes", "config_summary", "kisa_checklist", "source_checks") if key in data},
+                                        "routes", "config_summary", "owasp_coverage", "source_checks") if key in data},
         )
 
     def to_dict(self) -> dict:

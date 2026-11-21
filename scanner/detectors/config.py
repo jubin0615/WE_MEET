@@ -15,9 +15,9 @@ def detect(name, content):
     except (SyntaxError, ValueError):
         return hits, summary
 
-    def add(node, key, codes, cwe, title, fix, value):
+    def add(node, key, category, cwe, title, fix, value):
         summary.append({'file': name, 'line': node.lineno, 'setting': key, 'value': value})
-        hits.append(RawHit('config', 'vs-config-' + key, name, node.lineno, cwe, codes, title, fix,
+        hits.append(RawHit('config', 'vs-config-' + key, name, node.lineno, cwe, category, title, fix,
                            identity=code_identity(content, node.lineno, True)))
 
     for node in ast.walk(tree):
@@ -30,10 +30,10 @@ def detect(name, content):
                 if isinstance(node.value, ast.Constant):
                     value = node.value.value
                     if setting == 'DEBUG' and value is True:
-                        add(node, 'debug', ['CI-04'], 'CWE-489', '디버그 설정 활성화', '배포 환경에서는 디버그를 끄세요.', True)
+                        add(node, 'debug', 'VS-06', 'CWE-489', '디버그 설정 활성화', '배포 환경에서는 디버그를 끄세요.', True)
                     elif setting in ('SESSION_COOKIE_SECURE', 'SESSION_COOKIE_HTTPONLY', 'CSRF_COOKIE_SECURE') and value is False:
                         cwe = 'CWE-1004' if setting == 'SESSION_COOKIE_HTTPONLY' else 'CWE-614'
-                        add(node, 'cookie-flags', ['CI-16', 'CI-18'], cwe, '쿠키 보호 속성 비활성화',
+                        add(node, 'cookie-flags', 'VS-06', cwe, '쿠키 보호 속성 비활성화',
                             '인증 쿠키에 Secure·HttpOnly·SameSite 정책을 적용하세요.', False)
         if not isinstance(node, ast.Call):
             continue
@@ -41,7 +41,7 @@ def detect(name, content):
         kwargs = {k.arg: k.value for k in node.keywords if k.arg}
         literal = {k: v.value for k, v in kwargs.items() if isinstance(v, ast.Constant)}
         if function.endswith(('.run', 'FastAPI', 'Starlette')) and literal.get('debug') is True:
-            add(node, 'debug', ['CI-04'], 'CWE-489', '디버그 모드 활성화', '배포 환경에서는 디버그를 끄세요.', True)
+            add(node, 'debug', 'VS-06', 'CWE-489', '디버그 모드 활성화', '배포 환경에서는 디버그를 끄세요.', True)
         callee = function.rsplit('.', 1)[-1]
         if callee in ('CORS', 'add_middleware'):
             cors = callee == 'CORS' or any(ast.unparse(a).rsplit('.', 1)[-1] == 'CORSMiddleware' for a in node.args)
@@ -52,7 +52,7 @@ def detect(name, content):
             except (ValueError, TypeError):
                 origin = None
             if cors and (origin == '*' or isinstance(origin, (list, tuple)) and '*' in origin):
-                add(node, 'cors', ['V-02', 'CI-05'], 'CWE-942', '와일드카드 CORS 설정',
+                add(node, 'cors', 'VS-06', 'CWE-942', '와일드카드 CORS 설정',
                     '공개 API인지 확인하고 인증 응답은 신뢰한 Origin만 허용하세요.', '*')
         if function.endswith('.set_cookie'):
             # Explicit **kwargs may contain the flags; absence cannot be established there.
@@ -64,7 +64,7 @@ def detect(name, content):
                 missing.append('samesite')
             if missing:
                 cwe = 'CWE-614' if 'secure' in missing else 'CWE-1004' if 'httponly' in missing else 'CWE-1275'
-                add(node, 'cookie-flags', ['CI-16', 'CI-18'], cwe, '쿠키 보호 속성 확인 필요',
+                add(node, 'cookie-flags', 'VS-06', cwe, '쿠키 보호 속성 확인 필요',
                     '인증 쿠키인지 확인하고 Secure·HttpOnly·SameSite 속성을 명시하세요.', ', '.join(missing))
                 hits[-1].severity = Severity.MEDIUM
     return hits, summary

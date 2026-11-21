@@ -122,7 +122,7 @@ def inspect(directory, files):
             else:
                 hit.evidence = secrets.mask(hit.evidence, hidden[hit.file])
     for entry in getattr(files, 'sensitive_files', []) if getattr(files, 'committed', True) else ():
-        raw.append(RawHit('secrets', 'vs-secret-file', entry['path'], 1, 'CWE-540', ['CI-05', 'V-01'],
+        raw.append(RawHit('secrets', 'vs-secret-file', entry['path'], 1, 'CWE-540', 'VS-01',
             '민감 파일이 Git HEAD에 포함됨', '실제 자격증명이면 교체하고 추적을 해제하세요. .gitignore 추가만으로 과거 커밋에서 삭제되지 않습니다.',
             evidence='[파일 존재만 기록 · 내용 저장/전송 없음]', identity=entry['kind']))
     settings.extend({'file': h.file, 'line': h.line, 'setting': h.rule_id, 'value': '확인 필요'}
@@ -132,6 +132,13 @@ def inspect(directory, files):
     result.credential_files = credential_files
     result.source_checks = project.coverage(files, partial, route_rows, manifests, pin_count,
         dependencies.database()["date"])
+    result.committed_sensitive = bool(getattr(files, "sensitive_files", ())) and getattr(files, "committed", True)
+    result.inventory_hints = set()
+    if any(re.search(r"\b(?:supabase|firebase)\b", text, re.I) for text in contents.values()):
+        result.inventory_hints.add("baas")
+    if any(name.rsplit("/", 1)[-1] in {"pyproject.toml", "Cargo.toml", "Pipfile", "composer.json"}
+           for name in contents):
+        result.inventory_hints.add("dependencies")
     result.file_upload = any('request.files' in text or 'UploadFile' in text or 'multer' in text
                              for text in contents.values())
     return result

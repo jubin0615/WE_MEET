@@ -9,16 +9,15 @@
       "message": "함수 인자를 신뢰하는 마크업",
       "metadata": {
         "cwe": "CWE-79",
-        "kisa": [
-          "CI-06"
-        ],
         "vibescan": {
           "title_ko": "함수 인자를 신뢰하는 마크업",
           "remediation_ko": "HTML 자동 이스케이프를 유지하세요.",
           "severity": "Medium",
           "confidence": "Potential",
           "impact_ko": "함수 인자를 Markup으로 감싸면 HTML 자동 이스케이프가 꺼집니다. 그 값에 사용자 입력이 섞이면 공격자가 넣은 스크립트가 다른 사용자의 브라우저에서 실행됩니다(XSS).",
-          "fix_example": "-return Markup(f\"<p>{note}</p>\")\n+return Markup(\"<p>{}</p>\").format(note)  # format이 인자를 이스케이프합니다"
+          "fix_example": "-return Markup(f\"<p>{note}</p>\")\n+return Markup(\"<p>{}</p>\").format(note)  # format이 인자를 이스케이프합니다",
+          "category": "VS-05",
+          "limitations_ko": "출력 구문과 이스케이프 처리의 정적 단서에 한정하며 실제 렌더링 문맥은 수동 확인합니다."
         }
       },
       "patterns": [

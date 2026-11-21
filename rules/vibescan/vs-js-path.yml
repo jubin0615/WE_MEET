@@ -10,16 +10,15 @@
       "message": "입력값을 사용한 파일 접근",
       "metadata": {
         "cwe": "CWE-22",
-        "kisa": [
-          "CI-15"
-        ],
         "vibescan": {
           "title_ko": "입력값을 사용한 파일 접근",
           "remediation_ko": "기준 디렉터리 안의 파일만 허용하세요.",
           "severity": "High",
           "confidence": "Likely",
           "impact_ko": "요청 값으로 파일 경로를 만들면 ../ 같은 값으로 허용한 폴더 밖의 파일(.env, 소스 코드, 다른 사용자 파일)을 읽거나 덮어쓸 수 있습니다(경로 조작).",
-          "fix_example": "-res.sendFile(path.join(UPLOADS, req.query.name))\n+const file = path.resolve(UPLOADS, req.query.name)\n+if (!file.startsWith(UPLOADS + path.sep)) return res.status(400).end()\n+res.sendFile(file)"
+          "fix_example": "-res.sendFile(path.join(UPLOADS, req.query.name))\n+const file = path.resolve(UPLOADS, req.query.name)\n+if (!file.startsWith(UPLOADS + path.sep)) return res.status(400).end()\n+res.sendFile(file)",
+          "category": "VS-05",
+          "limitations_ko": "지원하는 언어와 호출 패턴에 한정하며 다른 함수의 입력 검증과 실행 시점의 값은 수동 확인합니다."
         }
       },
       "mode": "taint",

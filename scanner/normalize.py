@@ -6,6 +6,7 @@ import io
 import tokenize
 from dataclasses import dataclass, field
 
+from .owasp import classify
 from .models import Confidence, Finding, Location, Severity
 
 
@@ -16,7 +17,7 @@ class RawHit:
     file: str
     line: int
     cwe: str
-    kisa: list[str]
+    category: str
     title: str
     remediation: str
     severity: Severity = Severity.HIGH
@@ -26,6 +27,7 @@ class RawHit:
     fix: str = ""
     identity: str = ""
     trace: list[dict] = field(default_factory=list)
+    owasp_ai: list[str] = field(default_factory=list)
 
 
 def code_identity(content, line, python=False):
@@ -65,9 +67,9 @@ def normalize(hits):
                       else Confidence.POTENTIAL)
         # Correlated pattern matches do not establish input reachability.
         identity = f"{hit.rule_id}|{hit.file}|{hit.identity}"
-        findings.append(Finding(f"F-{number:03}", hit.title, hit.cwe, "", hit.severity, confidence,
+        findings.append(Finding(f"F-{number:03}", hit.title, hit.cwe, classify(hit.cwe) or "", hit.severity, confidence,
             Location(hit.file, hit.line), hit.evidence, methods, hit.impact, hit.remediation, hit.fix,
             rule_id=hit.rule_id, fingerprint=hashlib.sha256(identity.encode()).hexdigest()[:16],
-            kisa=sorted({code for h in group for code in h.kisa}), detector=hit.detector,
+            category=hit.category, owasp_ai=sorted({code for h in group for code in h.owasp_ai}), detector=hit.detector,
             trace=hit.trace))
     return findings

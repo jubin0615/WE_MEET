@@ -3,13 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>VibeScan · 보안 진단</title>
+<title>meet vibescan · 보안 진단</title>
 <link rel="stylesheet" href="/assets/dashboard.css">
 <script defer src="/assets/dashboard.js"></script>
 </head>
 <body>
 <header class="app-nav" id="app-nav">
-  <a class="brand" href="/" aria-label="VibeScan 홈"><svg viewBox="0 0 32 32" aria-hidden="true"><path d="M4 7h7l5 11L21 7h7L16 30Z"/><path class="brand-cut" d="M4 2h24v3H4z"/></svg>VibeScan<span class="brand-period">.</span></a>
+  <a class="brand" href="/" aria-label="meet vibescan 홈"><img src="/assets/meet-vibescan.svg" width="145" height="42" alt="meet vibescan"></a>
   <select id="projects" aria-label="프로젝트 선택"></select>
   <button id="add-project" type="button">＋ 프로젝트 추가</button>
   <div class="nav-actions">
@@ -41,8 +41,16 @@
         <div class="verdict-meta"><span id="risk-grade" class="badge"></span><span class="muted" title="열린 발견의 심각도별 가중 합계 · 최대 100점">위험 점수 <b id="risk"></b> / 100</span></div>
         <h2 id="verdict-title"></h2><p id="delta"></p>
       </section>
+      <section id="classification" class="classification" aria-label="분류별 점검 요약" hidden>
+        <label>분류별 점검 요약 <select id="classification-view"><option value="vs">VibeScan Top 10</option><option value="owasp">OWASP Top 10:2025</option></select></label>
+        <ul id="classification-rows"></ul>
+      </section>
       <div class="task-heading"><h2 id="findings-label" tabindex="-1">지금 확인할 것</h2><span id="resolution"></span></div>
       <label class="search" id="finding-search"><span aria-hidden="true">⌕</span><input id="search" type="search" aria-label="파일, 제목, CWE 검색" placeholder="파일, 제목, CWE 검색" autocomplete="off"><kbd>/</kbd></label>
+      <div id="finding-filters" class="finding-filters">
+        <label>VS 분류 <select id="vs-filter"></select></label>
+        <label>OWASP 분류 <select id="owasp-filter"></select></label>
+      </div>
       <div id="findings"></div>
       <section id="coverage-section" class="coverage-details" aria-labelledby="findings-label" hidden><p id="coverage-summary"></p><ul id="coverage"></ul><ul id="limitations" class="muted"></ul><div class="detected-profile"><h3>감지한 앱 정보</h3><p id="profile"></p></div></section>
       <nav id="section-jumps" class="section-jumps" aria-label="진단 결과 바로가기">

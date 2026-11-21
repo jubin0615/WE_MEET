@@ -9,16 +9,15 @@
       "message": "Rails 요청값의 HTML 이스케이프 해제",
       "metadata": {
         "cwe": "CWE-79",
-        "kisa": [
-          "CI-06"
-        ],
         "vibescan": {
           "title_ko": "Rails 요청값의 HTML 이스케이프 해제",
           "remediation_ko": "뷰의 기본 이스케이프를 유지하고 HTML이 필요하면 허용 목록으로 정화하세요.",
           "severity": "Medium",
           "confidence": "Potential",
           "impact_ko": "Rails 뷰가 요청 문자열을 안전한 HTML로 취급하면 사용자 입력이 페이지의 마크업으로 해석될 수 있습니다.",
-          "fix_example": "-raw(params[:body])\n+h(params[:body])"
+          "fix_example": "-raw(params[:body])\n+h(params[:body])",
+          "category": "VS-05",
+          "limitations_ko": "출력 구문과 이스케이프 처리의 정적 단서에 한정하며 실제 렌더링 문맥은 수동 확인합니다."
         }
       },
       "pattern-either": [

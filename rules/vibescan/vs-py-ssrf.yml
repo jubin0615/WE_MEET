@@ -9,16 +9,15 @@
       "message": "외부 입력 URL로 서버 요청",
       "metadata": {
         "cwe": "CWE-918",
-        "kisa": [
-          "CI-08"
-        ],
         "vibescan": {
           "title_ko": "외부 입력 URL로 서버 요청",
           "remediation_ko": "허용한 호스트만 요청하고 리다이렉트와 내부 주소를 제한하세요.",
           "severity": "High",
           "confidence": "Likely",
           "impact_ko": "요청 값 URL로 서버가 직접 요청을 보냅니다. 공격자가 내부망 주소나 클라우드 메타데이터(169.254.169.254)를 지정해 서버만 접근할 수 있는 정보를 빼낼 수 있습니다(SSRF).",
-          "fix_example": "-requests.get(request.args[\"url\"])\n+url = request.args[\"url\"]\n+if urlparse(url).hostname not in ALLOWED_HOSTS: abort(400)\n+requests.get(url, allow_redirects=False, timeout=5)"
+          "fix_example": "-requests.get(request.args[\"url\"])\n+url = request.args[\"url\"]\n+if urlparse(url).hostname not in ALLOWED_HOSTS: abort(400)\n+requests.get(url, allow_redirects=False, timeout=5)",
+          "category": "VS-05",
+          "limitations_ko": "지원하는 언어와 호출 패턴에 한정하며 다른 함수의 입력 검증과 실행 시점의 값은 수동 확인합니다."
         }
       },
       "mode": "taint",

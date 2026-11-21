@@ -118,6 +118,7 @@ function renderHistory(preferred) {
   $("scan-select").disabled = !scans.length;
 }
 function resetFilters() {
+  $("vs-filter").value = ""; $("owasp-filter").value = "";
   $("search").value = "";
 }
 function emptyState() {
@@ -255,7 +256,7 @@ function locationDetail(f) {
     const decision = node("details");
     const adjustment = f.original_severity && f.original_severity !== f.severity
       ? `심각도 조정 ${severityLabels[f.original_severity]} → ${severityLabels[f.severity]}` : "";
-    decision.append(node("summary", "판정 정보"), node("p", [f.rule_id, f.cwe, f.owasp, ...(f.kisa || []), f.kisa_reason,
+    decision.append(node("summary", "판정 정보"), node("p", [f.rule_id, f.category, f.cwe, f.owasp, ...(f.owasp_ai || []),
       confidenceLabels[f.confidence], adjustment, ...(f.how_found || []), f.triage_reason,
       f.introduced_in && "처음 발견 " + f.introduced_in.slice(0, 12)].filter(Boolean).join(" · ") || "기록 없음"));
     detail.append(decision);
@@ -267,6 +268,13 @@ function taskCard(group) {
   const card = node("article", "", "task-card " + group.level);
   const tags = node("div", "", "task-tags");
   tags.append(badge(group.level));
+  for (const code of new Set(group.items.map(f => f.owasp).filter(Boolean))) {
+    const url = result.owasp_coverage?.find(row => row.code === code)?.url;
+    const linked = /^https:\/\/top10\.owasp\.org\/2025\/A\d{2}_2025-[A-Za-z_]+\/$/.test(url || "");
+    const tag = node(linked ? "a" : "span", code, "new-tag");
+    if (linked) { tag.href = url; tag.target = "_blank"; tag.rel = "noopener noreferrer"; }
+    tags.append(tag);
+  }
   if (group.fresh) tags.append(node("span", "새로 발견", "new-tag"));
   const heading = node("h3", group.title);
   heading.append(node("small", group.locations.length + "곳"));
@@ -310,8 +318,10 @@ function taskCard(group) {
 
 function filterFindings() {
   const query = $("search").value.trim().toLocaleLowerCase();
-  const matches = taskGroups.filter(g => !query || g.items.some(f =>
-    [f.title, f.cwe, f.location?.file].join(" ").toLocaleLowerCase().includes(query)));
+  const vs = $("vs-filter").value, owasp = $("owasp-filter").value;
+  const matches = groupFindings(result.findings.filter(f =>
+    (!vs || f.category === vs) && (!owasp || f.owasp === owasp) &&
+    (!query || [f.title, f.cwe, f.location?.file].join(" ").toLocaleLowerCase().includes(query))));
   const counts = new Map();
   for (const group of matches) counts.set(group.section, (counts.get(group.section) || 0) + 1);
   for (const section of Object.keys(sectionNames)) {
@@ -324,19 +334,50 @@ function filterFindings() {
   $("resolution").hidden = activeSection !== "findings";
   $("coverage-section").hidden = !coverage;
   $("finding-search").hidden = coverage;
+  $("finding-filters").hidden = coverage || !result.coverage?.some(c => c.code);
   $("findings").hidden = coverage;
   const groups = matches.filter(g => g.section === activeSection);
   $("findings").replaceChildren(...groups.map(taskCard));
   if (!coverage && !groups.length) {
-    const text = query ? "검색 조건에 맞는 항목이 없습니다." : "열린 치명·높음 항목이 없습니다.";
+    const text = (query || vs || owasp) ? "검색 조건에 맞는 항목이 없습니다." : "열린 치명·높음 항목이 없습니다.";
     $("findings").append(node("p", text, "quiet-state"));
   }
 }
+function renderClassification() {
+  const rows = $("classification-view").value === "owasp" ? result.owasp_coverage : result.coverage;
+  const items = (rows || []).filter(row => row.code);
+  $("classification").hidden = !items.length;
+  $("classification-rows").replaceChildren(...items.map(row => {
+    const li = node("li");
+    li.append(node("strong", row.code), node("span", row.name),
+      node("small", row.status + (row.findings?.length ? " · " + row.findings.length + "건" : "")));
+    li.title = row.reason;
+    return li;
+  }));
+}
+
+function filterOptions(id, rows) {
+  const select = $(id), selected = select.value;
+  const options = [["", "전체"], ...(rows || []).filter(row => row.code).map(row => [row.code, row.code + " " + row.name])];
+  select.replaceChildren(...options.map(([code, name]) => {
+    const option = node("option", name);
+    option.value = code;
+    return option;
+  }));
+  select.value = options.some(([code]) => code === selected) ? selected : "";
+}
+
 function renderCoverage() {
-  const checks = [...(result.coverage || []), ...(result.source_checks || [])], completed = checks.filter(c => c.execution === "completed").length;
-  $("coverage-summary").textContent = checks.length ? `검사 범위 · ${checks.length}개 점검 중 ${completed}개 완료${completed < checks.length ? ` · ${checks.length - completed}개 미완료·수동 확인` : ""}` : "검사 범위 기록 없음";
+  const checks = [...(result.coverage || []), ...(result.source_checks || [])];
+  const completed = checks.filter(c => c.execution === "completed").length;
+  const inapplicable = checks.filter(c => c.execution === "not_applicable").length;
+  const pending = checks.length - completed - inapplicable;
+  $("coverage-summary").textContent = checks.length
+    ? [`검사 범위 · ${checks.length}개 점검 중 ${completed}개 완료`,
+       inapplicable && `해당 없음(추정) ${inapplicable}개`, pending && `미완료·수동 확인 ${pending}개`].filter(Boolean).join(" · ")
+    : "검사 범위 기록 없음";
   const execution = {completed: "✓ 자동 점검 범위 검사 완료", partial: "◐ 부분 점검 · 수동 확인 포함", manual: "◐ 수동 확인 필요 · 미검사", unsupported: "✕ 지원 소스 없음 · 미검사"};
-  $("coverage").replaceChildren(...checks.map(c => node("li", `${c.name} — ${execution[c.execution] || "✕ 검사 여부 미확인"}. ${c.reason || ""}`)));
+  $("coverage").replaceChildren(...checks.map(c => node("li", `${c.name} — ${c.status || execution[c.execution] || "✕ 검사 여부 미확인"}. ${c.reason || ""}`)));
   const profile = result.profile || {};
   $("limitations").replaceChildren(...(profile.limitations || []).map(text => node("li", text)));
   $("profile").textContent = `${profile.framework || "프레임워크 미확인"} · 라우트 ${profile.routes || 0}개 · ${profile.auth || "인증 방식 미확인"}`;
@@ -367,14 +408,16 @@ function render() {
     : later ? `우선순위가 낮은 ${later}가지를 확인하세요.` : "자동 점검에서 열린 문제가 없습니다.";
   const notes = d.baseline_commit ? [fresh && `새로 발견한 문제 ${fresh}가지`, fixed.length && `해결된 문제 ${fixed.length}가지`]
     : ["이 브랜치의 현재 커밋과 비교할 이전 검사 결과가 없습니다."];
-  const incomplete = [...(d.coverage || []), ...(d.source_checks || [])].filter(c => c.execution !== "completed").length;
+  const incomplete = [...(d.coverage || []), ...(d.source_checks || [])].filter(c => !["completed", "not_applicable"].includes(c.execution)).length;
   if (incomplete) notes.push(`직접 확인할 점검 항목 ${incomplete}개`);
   $("delta").textContent = notes.filter(Boolean).join(" · ") || "지난 검사와 비교해 새로 발견되거나 해결된 문제가 없습니다.";
   $("resolution").textContent = urgent + done ? `치명·높음 ${urgent + done}가지 중 ${done}가지 해결` : "";
   const latest = projectScans()[0];
   $("history-notice").hidden = !latest || latest.scan_id === d.scan_id;
   activeSection = "findings";
-  filterFindings(); renderCoverage();
+  filterOptions("vs-filter", d.coverage);
+  filterOptions("owasp-filter", d.owasp_coverage);
+  renderClassification(); filterFindings(); renderCoverage();
   $("empty").hidden = true; $("result").hidden = false; $("download").disabled = false;
   renderOnboarding();
 }
@@ -450,7 +493,7 @@ function alertNewRisks(scan) {
   const text = `${scan.repo?.name || "프로젝트"} · 커밋 ${(scan.commit || "").slice(0, 7)}에서 새 치명·높음 ${fresh.length}건: ${fresh[0].title}`;
   message(text);
   if ("Notification" in globalThis && Notification.permission === "granted") {
-    try { new Notification("VibeScan · 새 위험 발견", {body: text}); } catch { /* Toast remains available. */ }
+    try { new Notification("meet vibescan · 새 위험 발견", {body: text}); } catch { /* Toast remains available. */ }
   }
   return true;
 }
@@ -560,6 +603,8 @@ $("scan-menu-toggle").addEventListener("click", () => {
 $("mode-local").addEventListener("click", () => startScan("local"));
 $("mode-ai").addEventListener("click", () => startScan("ai"));
 $("scan-select").addEventListener("change", () => { resetFilters(); selectScan(); });
+$("classification-view").addEventListener("change", renderClassification);
+for (const id of ["vs-filter", "owasp-filter"]) $(id).addEventListener("change", filterFindings);
 $("search").addEventListener("input", filterFindings);
 for (const section of Object.keys(sectionNames)) {
   $("jump-" + section).addEventListener("click", () => {

@@ -1,0 +1,108 @@
+{
+  "sources": [
+    "https://genai.owasp.org/llm-top-10/",
+    "https://genai.owasp.org/resource/owasp-top-10-for-agentic-applications-for-2026/"
+  ],
+  "items": [
+    {
+      "code": "LLM01",
+      "year": 2025,
+      "name": "Prompt Injection"
+    },
+    {
+      "code": "LLM02",
+      "year": 2025,
+      "name": "Sensitive Information Disclosure"
+    },
+    {
+      "code": "LLM03",
+      "year": 2025,
+      "name": "Supply Chain"
+    },
+    {
+      "code": "LLM04",
+      "year": 2025,
+      "name": "Data and Model Poisoning"
+    },
+    {
+      "code": "LLM05",
+      "year": 2025,
+      "name": "Improper Output Handling"
+    },
+    {
+      "code": "LLM06",
+      "year": 2025,
+      "name": "Excessive Agency"
+    },
+    {
+      "code": "LLM07",
+      "year": 2025,
+      "name": "System Prompt Leakage"
+    },
+    {
+      "code": "LLM08",
+      "year": 2025,
+      "name": "Vector and Embedding Weaknesses"
+    },
+    {
+      "code": "LLM09",
+      "year": 2025,
+      "name": "Misinformation"
+    },
+    {
+      "code": "LLM10",
+      "year": 2025,
+      "name": "Unbounded Consumption"
+    },
+    {
+      "code": "ASI01",
+      "year": 2026,
+      "name": "Agent Goal Hijack"
+    },
+    {
+      "code": "ASI02",
+      "year": 2026,
+      "name": "Tool Misuse & Exploitation"
+    },
+    {
+      "code": "ASI03",
+      "year": 2026,
+      "name": "Identity & Privilege Abuse"
+    },
+    {
+      "code": "ASI04",
+      "year": 2026,
+      "name": "Agentic Supply Chain Vulnerabilities"
+    },
+    {
+      "code": "ASI05",
+      "year": 2026,
+      "name": "Unexpected Code Execution (RCE)"
+    },
+    {
+      "code": "ASI06",
+      "year": 2026,
+      "name": "Memory & Context Poisoning"
+    },
+    {
+      "code": "ASI07",
+      "year": 2026,
+      "name": "Insecure Inter-Agent Communication"
+    },
+    {
+      "code": "ASI08",
+      "year": 2026,
+      "name": "Cascading Failures"
+    },
+    {
+      "code": "ASI09",
+      "year": 2026,
+      "name": "Human-Agent Trust Exploitation"
+    },
+    {
+      "code": "ASI10",
+      "year": 2026,
+      "name": "Rogue Agents"
+    }
+  ]
+}
